@@ -854,7 +854,7 @@
         }
       ];
 
-      // Danh sách Vật phẩm cộng điểm (Đã cộng thêm +50 điểm mỗi loại theo yêu cầu)
+      // Danh sách Vật phẩm cộng điểm
       const ITEM_TYPES = [
         { emoji: '🧋', label: 'Trà sữa', points: 130, color: '#D97706', bg: '#FEF3C7' },
         { emoji: '🥕', label: 'Cà rốt tiếp sức', points: 110, color: '#EA580C', bg: '#FFEDD5' },
@@ -897,7 +897,7 @@
         }
       }
 
-      // Hàm cho Cô giáo Thỏ nhảy (hỗ trợ Double Jump)
+      // Hàm cho Bé Thỏ nhảy (hỗ trợ Double Jump)
       function triggerBunnyJump() {
         if (gameState !== 'PLAYING') return;
 
@@ -952,7 +952,6 @@
         jumpParticles = [];
         obstacleSpawnTimer = 50;
         itemSpawnTimer = 95;
-        // Giảm tốc độ cơ bản để người chơi kịp đọc chữ trên chướng ngại vật
         gameSpeed = Math.min(4.2, Math.max(3.4, viewW * 0.0095));
 
         bunny.y = groundY;
@@ -1020,9 +1019,9 @@
         }, 1100);
       }
 
-      // Lắng nghe cảm ứng chạm nhảy trên Canvas (chống cuộn/zoom tuyệt đối)
+      // Lắng nghe cảm ứng chạm nhảy trên Canvas
       runnerCanvas.addEventListener('touchstart', function (e) {
-        e.preventDefault(); // Chặn iOS Safari không cho scroll hay nháy màn hình
+        e.preventDefault();
         if (gameState === 'PLAYING') {
           triggerBunnyJump();
         }
@@ -1034,7 +1033,6 @@
         }
       });
 
-      // Hỗ trợ phím Space / Mũi tên lên nếu chơi trên máy tính
       window.addEventListener('keydown', function (e) {
         if (e.code === 'Space' || e.code === 'ArrowUp') {
           if (gameState === 'PLAYING') {
@@ -1095,11 +1093,9 @@
           return;
         }
 
-        // 2. Tăng tốc độ chạy nhẹ nhàng theo phần trăm điểm đạt được (không quá nhanh để dễ đọc chữ)
         const progressRatio = Math.min(1, score / TARGET_SCORE);
         const currentSpeed = gameSpeed + progressRatio * 1.15;
 
-        // Cộng điểm tự động nhẹ khi đang chạy bền bỉ
         score = Math.min(TARGET_SCORE, score + 0.22 * dtFactor);
         updateScoreUI();
         if (score >= TARGET_SCORE) {
@@ -1107,7 +1103,6 @@
           return;
         }
 
-        // 3. Vật lý nhảy của Bé Thỏ
         bunny.vy += bunny.gravity * dtFactor;
         bunny.y += bunny.vy * dtFactor;
 
@@ -1122,12 +1117,11 @@
         if (bunny.invincibleTimer > 0) bunny.invincibleTimer -= dtFactor;
         if (bunny.speechTimer > 0) bunny.speechTimer -= dtFactor;
 
-        // 4. Sinh Chướng ngại vật biết di chuyển (Bay lượn lên xuống, nhảy tưng tưng, hoặc lao nhanh vừa phải)
+        // 4. Sinh Chướng ngại vật di chuyển (Đã đưa các vật bay lên cao hơn hẳn)
         obstacleSpawnTimer -= dtFactor;
         if (obstacleSpawnTimer <= 0) {
           const type = OBSTACLE_TYPES[Math.floor(Math.random() * OBSTACLE_TYPES.length)];
 
-          // Chọn kiểu di chuyển êm ái hơn để vừa có thử thách vừa kịp đọc chữ
           const roll = Math.random();
           let movePattern = 'static';
           let baseY = groundY;
@@ -1136,22 +1130,22 @@
           let speedMult = 1;
 
           if (roll < 0.35) {
-            // Kiểu 1: Bay lượn lên xuống nhịp nhàng (Wave)
+            // Kiểu 1: Bay lượn trên không trung ở mức cao (Đã đẩy lên cao hơn)
             movePattern = 'wave';
-            baseY = groundY - 42;
-            ampY = 26 + Math.random() * 14;
-            freqY = 0.04 + Math.random() * 0.02;
+            baseY = groundY - 85; // Đưa vị trí gốc lên cao hơn hẳn
+            ampY = 24 + Math.random() * 14;
+            freqY = 0.038 + Math.random() * 0.02;
           } else if (roll < 0.65) {
-            // Kiểu 2: Nhảy tưng tưng trên mặt đất chậm rãi hơn (Bounce)
+            // Kiểu 2: Nhảy tưng tưng trên mặt đất
             movePattern = 'bounce';
             baseY = groundY;
-            ampY = 36 + Math.random() * 18;
-            freqY = 0.048 + Math.random() * 0.018;
+            ampY = 34 + Math.random() * 16;
+            freqY = 0.046 + Math.random() * 0.016;
           } else if (roll < 0.88) {
-            // Kiểu 3: Nhích nhanh nhẹ về phía trước (Surge)
+            // Kiểu 3: Lao nhanh / bay tầm cao trung bình
             movePattern = 'surge';
-            baseY = Math.random() < 0.4 ? groundY - 46 : groundY;
-            speedMult = 1.12 + Math.random() * 0.1;
+            baseY = Math.random() < 0.5 ? groundY - 80 : groundY;
+            speedMult = 1.1 + Math.random() * 0.08;
           }
 
           obstacles.push({
@@ -1167,16 +1161,15 @@
             speedMult,
             type
           });
-          // Giãn khoảng cách xuất hiện rộng hơn một chút để mắt thoải mái đọc chữ
           const minGap = Math.max(72, 96 - progressRatio * 20);
           obstacleSpawnTimer = minGap + Math.random() * 42;
         }
 
-        // 5. Sinh Vật phẩm Trà sữa / Cà rốt / Hoa 20/10 (Rải rác thưa hơn)
+        // 5. Sinh Vật phẩm Trà sữa / Cà rốt / Hoa 20/10
         itemSpawnTimer -= dtFactor;
         if (itemSpawnTimer <= 0) {
           const item = ITEM_TYPES[Math.floor(Math.random() * ITEM_TYPES.length)];
-          const heightOffset = [42, 105, 160][Math.floor(Math.random() * 3)];
+          const heightOffset = [45, 110, 165][Math.floor(Math.random() * 3)];
           collectibles.push({
             x: viewW + 60,
             y: groundY - heightOffset,
@@ -1184,13 +1177,10 @@
             bobPhase: Math.random() * Math.PI * 2,
             item
           });
-          // Khoảng cách xuất hiện thưa hơn nhiều (từ 2.3s đến 4s mới có 1 cục điểm thưởng)
           itemSpawnTimer = 140 + Math.random() * 105;
         }
 
-        // 6. Cập nhật Chướng ngại vật di chuyển & Kiểm tra va chạm (Hitbox chuẩn xác, không bị ảo)
         const bounceOffset = bunny.onGround ? Math.abs(Math.sin(bunny.runCycle)) * 6 : 0;
-        // Vùng lõi cơ thể thực tế của Bé Thỏ (bỏ qua phần rìa tai thỏ và nơ để nhảy qua sát mép không bị phạt oan)
         const bunnyCoreLeft = bunny.x - 13;
         const bunnyCoreRight = bunny.x + 13;
         const bunnyCoreTop = (bunny.y - bounceOffset) - 52;
@@ -1200,7 +1190,6 @@
           const obs = obstacles[i];
           obs.phase += obs.freqY * dtFactor;
 
-          // Tính tốc độ ngang và vị trí dọc theo kiểu di chuyển
           let currentObsSpeed = currentSpeed * (obs.speedMult || 1);
           if (obs.movePattern === 'wave') {
             obs.y = Math.min(groundY, obs.baseY + Math.sin(obs.phase) * obs.ampY);
@@ -1212,7 +1201,6 @@
 
           obs.x -= currentObsSpeed * dtFactor;
 
-          // Vùng lõi của khối chướng ngại vật (thu gọn 8px mỗi cạnh so với khung vẽ 48x48 để cảm giác nhảy mượt và thật mắt)
           const obsCoreLeft = obs.x - (obs.w * 0.5 - 8);
           const obsCoreRight = obs.x + (obs.w * 0.5 - 8);
           const obsCoreTop = obs.y - obs.h + 8;
@@ -1252,7 +1240,6 @@
           }
         }
 
-        // 7. Cập nhật Vật phẩm cộng điểm (Kiểm tra va chạm với toàn bộ thân Bé Thỏ từ chân tới tai)
         const bunnyPickupLeft = bunny.x - 20;
         const bunnyPickupRight = bunny.x + 20;
         const bunnyPickupTop = (bunny.y - bounceOffset) - 66;
@@ -1264,13 +1251,11 @@
           col.bobPhase += 0.08 * dtFactor;
 
           const cy = col.y + Math.sin(col.bobPhase) * 6;
-          // Tìm điểm gần nhất trên khung người Bé Thỏ tới tâm vật phẩm
           const closestX = Math.max(bunnyPickupLeft, Math.min(col.x, bunnyPickupRight));
           const closestY = Math.max(bunnyPickupTop, Math.min(cy, bunnyPickupBottom));
           const dist = Math.hypot(col.x - closestX, cy - closestY);
 
           if (dist < col.r + 6) {
-            // Nhặt thành công!
             SoundFX.collect();
             score = Math.min(TARGET_SCORE, score + col.item.points);
             updateScoreUI();
@@ -1291,7 +1276,6 @@
           }
         }
 
-        // 8. Cập nhật hiệu ứng hạt nhảy & chữ bay
         for (let i = jumpParticles.length - 1; i >= 0; i--) {
           const jp = jumpParticles[i];
           jp.x += jp.vx * dtFactor;
