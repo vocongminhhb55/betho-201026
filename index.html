@@ -950,9 +950,10 @@
         collectibles = [];
         floatingTexts = [];
         jumpParticles = [];
-        obstacleSpawnTimer = 35;
+        obstacleSpawnTimer = 50;
         itemSpawnTimer = 95;
-        gameSpeed = Math.min(6.4, Math.max(5.4, viewW * 0.014));
+        // Giảm tốc độ cơ bản để người chơi kịp đọc chữ trên chướng ngại vật
+        gameSpeed = Math.min(4.2, Math.max(3.4, viewW * 0.0095));
 
         bunny.y = groundY;
         bunny.vy = 0;
@@ -1094,9 +1095,9 @@
           return;
         }
 
-        // 2. Tăng tốc độ chạy dần theo phần trăm điểm đạt được
+        // 2. Tăng tốc độ chạy nhẹ nhàng theo phần trăm điểm đạt được (không quá nhanh để dễ đọc chữ)
         const progressRatio = Math.min(1, score / TARGET_SCORE);
-        const currentSpeed = gameSpeed + progressRatio * 2.4;
+        const currentSpeed = gameSpeed + progressRatio * 1.15;
 
         // Cộng điểm tự động nhẹ khi đang chạy bền bỉ
         score = Math.min(TARGET_SCORE, score + 0.22 * dtFactor);
@@ -1121,36 +1122,36 @@
         if (bunny.invincibleTimer > 0) bunny.invincibleTimer -= dtFactor;
         if (bunny.speechTimer > 0) bunny.speechTimer -= dtFactor;
 
-        // 4. Sinh Chướng ngại vật biết di chuyển (Bay lượn lên xuống, nhảy tưng tưng, hoặc lao nhanh)
+        // 4. Sinh Chướng ngại vật biết di chuyển (Bay lượn lên xuống, nhảy tưng tưng, hoặc lao nhanh vừa phải)
         obstacleSpawnTimer -= dtFactor;
         if (obstacleSpawnTimer <= 0) {
           const type = OBSTACLE_TYPES[Math.floor(Math.random() * OBSTACLE_TYPES.length)];
 
-          // Chọn kiểu di chuyển của chướng ngại vật để tăng độ khó
+          // Chọn kiểu di chuyển êm ái hơn để vừa có thử thách vừa kịp đọc chữ
           const roll = Math.random();
           let movePattern = 'static';
           let baseY = groundY;
           let ampY = 0;
-          let freqY = 0.06;
+          let freqY = 0.04;
           let speedMult = 1;
 
           if (roll < 0.35) {
-            // Kiểu 1: Bay lượn lên xuống (Wave)
+            // Kiểu 1: Bay lượn lên xuống nhịp nhàng (Wave)
             movePattern = 'wave';
-            baseY = groundY - 48;
-            ampY = 36 + Math.random() * 18;
-            freqY = 0.065 + Math.random() * 0.03;
+            baseY = groundY - 42;
+            ampY = 26 + Math.random() * 14;
+            freqY = 0.04 + Math.random() * 0.02;
           } else if (roll < 0.65) {
-            // Kiểu 2: Nhảy tưng tưng trên mặt đất (Bounce)
+            // Kiểu 2: Nhảy tưng tưng trên mặt đất chậm rãi hơn (Bounce)
             movePattern = 'bounce';
             baseY = groundY;
-            ampY = 48 + Math.random() * 24;
-            freqY = 0.075 + Math.random() * 0.025;
+            ampY = 36 + Math.random() * 18;
+            freqY = 0.048 + Math.random() * 0.018;
           } else if (roll < 0.88) {
-            // Kiểu 3: Tăng tốc lao vút về phía trước (Surge)
+            // Kiểu 3: Nhích nhanh nhẹ về phía trước (Surge)
             movePattern = 'surge';
-            baseY = Math.random() < 0.4 ? groundY - 52 : groundY;
-            speedMult = 1.28 + Math.random() * 0.18;
+            baseY = Math.random() < 0.4 ? groundY - 46 : groundY;
+            speedMult = 1.12 + Math.random() * 0.1;
           }
 
           obstacles.push({
@@ -1166,9 +1167,9 @@
             speedMult,
             type
           });
-          // Nhịp độ sinh vật cản nhanh và thử thách hơn khi điểm cao
-          const minGap = Math.max(46, 68 - progressRatio * 20);
-          obstacleSpawnTimer = minGap + Math.random() * 34;
+          // Giãn khoảng cách xuất hiện rộng hơn một chút để mắt thoải mái đọc chữ
+          const minGap = Math.max(72, 96 - progressRatio * 20);
+          obstacleSpawnTimer = minGap + Math.random() * 42;
         }
 
         // 5. Sinh Vật phẩm Trà sữa / Cà rốt / Hoa 20/10 (Rải rác thưa hơn)
@@ -1206,7 +1207,7 @@
           } else if (obs.movePattern === 'bounce') {
             obs.y = obs.baseY - Math.abs(Math.sin(obs.phase)) * obs.ampY;
           } else if (obs.movePattern === 'surge') {
-            currentObsSpeed = currentSpeed * (obs.speedMult + Math.sin(obs.phase * 1.5) * 0.18);
+            currentObsSpeed = currentSpeed * (obs.speedMult + Math.sin(obs.phase * 1.2) * 0.1);
           }
 
           obs.x -= currentObsSpeed * dtFactor;
