@@ -1,0 +1,2064 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <!-- Tối ưu hoàn hảo cho iPhone 11: Khóa zoom, tràn viền tai thỏ (viewport-fit=cover) -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <title>Bé Thỏ Vượt Sóng Gió - 20/10</title>
+
+  <!-- Tailwind CSS & Google Fonts Quicksand tròn trịa dễ thương -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    /* ==========================================================================
+       CSS CHỐNG SCROLL / ZOOM / NHẢY KHUNG HÌNH TRÊN IPHONE 11 (iOS SAFARI)
+       ========================================================================== */
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
+    html, body {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      height: 100dvh;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      overscroll-behavior: none;
+      touch-action: none; /* Chặn cử chỉ pan/pinch-zoom mặc định của iOS */
+      font-family: 'Quicksand', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: linear-gradient(180deg, #FFF0F5 0%, #FFF9DB 65%, #E8F8F5 100%);
+    }
+
+    /* Vùng hiển thị an toàn cho tai thỏ và thanh Home Indicator của iPhone 11 */
+    .safe-area-container {
+      padding-top: max(env(safe-area-inset-top), 10px);
+      padding-bottom: max(env(safe-area-inset-bottom), 10px);
+      padding-left: max(env(safe-area-inset-left), 12px);
+      padding-right: max(env(safe-area-inset-right), 12px);
+    }
+
+    /* Hiệu ứng nút bấm Pastel nổi 3D dễ thương */
+    .btn-pastel-pink {
+      background: linear-gradient(135deg, #FF8FAB 0%, #FB6F92 100%);
+      box-shadow: 0 6px 0 #D84B70, 0 10px 20px rgba(251, 111, 146, 0.35);
+      transition: transform 0.1s ease, box-shadow 0.1s ease;
+    }
+    .btn-pastel-pink:active {
+      transform: translateY(4px);
+      box-shadow: 0 2px 0 #D84B70, 0 4px 10px rgba(251, 111, 146, 0.3);
+    }
+
+    .btn-pastel-mint {
+      background: linear-gradient(135deg, #68D8D6 0%, #37BEB0 100%);
+      box-shadow: 0 5px 0 #239689, 0 8px 16px rgba(55, 190, 176, 0.3);
+      transition: transform 0.1s ease, box-shadow 0.1s ease;
+    }
+    .btn-pastel-mint:active {
+      transform: translateY(3px);
+      box-shadow: 0 2px 0 #239689;
+    }
+
+    /* Animation nhịp đập & lơ lửng */
+    @keyframes floatSlow {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-7px); }
+    }
+    .animate-float {
+      animation: floatSlow 2.6s ease-in-out infinite;
+    }
+
+    @keyframes pulseGlow {
+      0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(251, 111, 146, 0.5); }
+      50% { transform: scale(1.04); box-shadow: 0 0 0 12px rgba(251, 111, 146, 0); }
+    }
+    .animate-pulse-glow {
+      animation: pulseGlow 2s infinite;
+    }
+
+    @keyframes popIn {
+      0% { opacity: 0; transform: scale(0.8) translateY(16px); }
+      100% { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    .modal-pop {
+      animation: popIn 0.38s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    }
+
+    /* Thanh cuộn ẩn trong modal cho màn hình nhỏ */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+      touch-action: pan-y; /* Chỉ cho phép cuộn dọc nhẹ bên trong thiệp nếu nội dung dài */
+    }
+  </style>
+</head>
+<body class="relative w-full h-full select-none overflow-hidden">
+
+  <!-- CANVAS CHÍNH CHO GAME RUNNER -->
+  <canvas id="runnerCanvas" class="block w-full h-full"></canvas>
+
+  <!-- CANVAS PHÁO HOA CONFETTI TOÀN MÀN HÌNH -->
+  <canvas id="confettiCanvas" class="pointer-events-none fixed inset-0 z-50 w-full h-full"></canvas>
+
+  <!-- ==========================================================================
+       HUD TRÊN CÙNG (ĐIỂM SỐ & THANH TIẾN ĐỘ 2010 ĐIỂM)
+       ========================================================================== -->
+  <div id="gameHud" class="fixed top-0 left-0 right-0 z-20 safe-area-container pointer-events-none flex flex-col gap-2">
+    <div class="flex items-center justify-between gap-2">
+      <!-- Huy hiệu Cô giáo Thỏ & Số Tim (Mạng) -->
+      <div class="bg-white/90 backdrop-blur-md border-2 border-pink-200 rounded-2xl px-3 py-1.5 shadow-sm flex items-center gap-2 pointer-events-auto">
+        <span class="text-2xl">🐰</span>
+        <div class="leading-tight">
+          <p class="text-[10px] font-bold text-pink-400 uppercase tracking-wider">Nhiệt Huyết</p>
+          <div id="heartsContainer" class="text-sm tracking-tighter">❤️❤️❤️</div>
+        </div>
+      </div>
+
+      <!-- Điểm số hiện tại / 2010 -->
+      <div class="bg-white/90 backdrop-blur-md border-2 border-amber-200 rounded-2xl px-3.5 py-1.5 shadow-sm flex items-center gap-2">
+        <span class="text-lg">🌸</span>
+        <div class="text-right leading-tight">
+          <p class="text-[10px] font-bold text-amber-500 uppercase">Điểm Yêu Thương</p>
+          <p class="text-base font-extrabold text-rose-500">
+            <span id="scoreText">0</span> <span class="text-xs text-gray-400 font-bold">/ 2010</span>
+          </p>
+        </div>
+      </div>
+
+      <!-- Nút bật/tắt âm thanh -->
+      <div class="flex items-center gap-1.5 pointer-events-auto">
+        <button id="soundToggleBtn" aria-label="Bật tắt âm thanh" class="bg-white/90 border-2 border-pink-200 text-pink-500 rounded-2xl w-10 h-10 flex items-center justify-center text-lg shadow-sm active:scale-95">
+          🔊
+        </button>
+      </div>
+    </div>
+
+    <!-- Thanh tiến trình tiến tới cột mốc 20/10 (2010 điểm) -->
+    <div class="w-full bg-white/85 backdrop-blur-sm border-2 border-pink-200 rounded-full h-5 p-0.5 shadow-inner relative overflow-hidden">
+      <div id="progressBar" class="h-full rounded-full bg-gradient-to-r from-pink-400 via-rose-400 to-amber-300 transition-all duration-150" style="width: 0%;"></div>
+      <div class="absolute inset-0 flex items-center justify-center text-[11px] font-extrabold text-rose-700 drop-shadow-sm">
+        <span id="progressLabel">Đường tới Vòng Quay 20/10: 0%</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Chỉ dẫn chạm nhảy dưới đáy màn hình khi đang chạy -->
+  <div id="touchHintBar" class="fixed bottom-4 left-0 right-0 z-10 pointer-events-none flex justify-center px-4">
+    <div class="bg-white/80 backdrop-blur-md border border-pink-200 rounded-full px-4 py-1.5 shadow-sm text-xs font-bold text-pink-600 flex items-center gap-2">
+      <span>👆 Chạm màn hình để Nhảy (Chạm 2 lần = Nhảy Đúp!)</span>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       MÀN HÌNH BẮT ĐẦU (START OVERLAY)
+       ========================================================================== -->
+  <div id="startScreen" class="fixed inset-0 z-30 flex items-center justify-center p-4 bg-pink-100/60 backdrop-blur-md safe-area-container">
+    <div class="modal-pop w-full max-w-sm bg-white/95 border-4 border-pink-200 rounded-3xl p-5 shadow-2xl text-center relative overflow-hidden">
+      <!-- Trang trí góc -->
+      <div class=" -top-6 -right-6 w-24 h-24 bg-pink-100 rounded-full opacity-60 absolute pointer-events-none"></div>
+      <div class=" -bottom-6 -left-6 w-24 h-24 bg-amber-100 rounded-full opacity-60 absolute pointer-events-none"></div>
+
+      <!-- Icon Bé Thỏ -->
+      <div class="animate-float mx-auto w-20 h-20 rounded-3xl bg-gradient-to-br from-pink-100 to-amber-100 border-2 border-pink-200 flex items-center justify-center shadow-md mb-3 relative">
+        <span class="text-5xl">🐰</span>
+        <span class="absolute -top-2 -right-2 bg-rose-500 text-white text-[10px] font-extrabold px-2 py-0.5 rounded-full shadow">20/10</span>
+        <span class="absolute -bottom-1.5 bg-amber-100 border border-amber-300 text-amber-800 text-[10px] font-extrabold px-2 py-0.5 rounded-full">🎀 Bé Thỏ</span>
+      </div>
+
+      <h1 class="text-xl font-extrabold text-rose-600 leading-snug">
+        Bé Thỏ Vượt Sóng Gió<br/>- 20/10 - 🌸
+      </h1>
+      <p class="text-xs font-bold text-pink-400 mt-0.5 mb-3">Phiên bản đặc biệt dành tặng em từ MinMin</p>
+
+      <!-- Luật chơi tóm tắt -->
+      <div class="bg-pink-50/90 border border-pink-100 rounded-2xl p-3 text-left text-xs space-y-2 mb-4">
+        <div class="flex items-start gap-2">
+          <span class="text-base">🏃‍♀️</span>
+          <p class="text-gray-700 font-semibold">
+            <strong class="text-rose-500">Chạm màn hình</strong> để nhảy né các chướng ngại vật biết di chuyển (hỗ trợ <strong class="text-rose-500">Nhảy Đúp 2 lần</strong> trên không).
+          </p>
+        </div>
+        <div class="flex items-start gap-2">
+          <span class="text-base">💔</span>
+          <p class="text-gray-700 font-semibold">
+            Đụng trúng chướng ngại vật sẽ bị <strong class="text-rose-600">-1 Tim & -150đ</strong>. Hết <strong class="text-rose-600">3 Tim ❤️❤️❤️</strong> là phải chạy lại từ đầu!
+          </p>
+        </div>
+        <div class="flex items-start gap-2">
+          <span class="text-base">🧋</span>
+          <p class="text-gray-700 font-semibold">
+            Nhặt <strong class="text-emerald-600">🧋 Trà sữa (+130đ), 🥕 Cà rốt (+110đ), 🌸 Hoa 20/10 (+170đ)</strong>.
+          </p>
+        </div>
+        <div class="flex items-start gap-2">
+          <span class="text-base">🎁</span>
+          <p class="text-gray-700 font-semibold">
+            Cán mốc <strong class="text-rose-600">2010 điểm</strong> để mở <strong class="text-amber-600">Vòng Quay May Mắn!</strong>
+          </p>
+        </div>
+      </div>
+
+      <button id="startGameBtn" class="btn-pastel-pink w-full py-3.5 rounded-2xl text-white font-extrabold text-base tracking-wide flex items-center justify-center gap-2">
+        <span>🚀 BẮT ĐẦU CHẠY NGAY</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       POPUP GAME OVER KHI HẾT 3 TIM (THỬ THÁCH THẤT BẠI)
+       ========================================================================== -->
+  <div id="gameOverModal" class="hidden fixed inset-0 z-30 flex items-center justify-center p-4 bg-rose-950/45 backdrop-blur-md safe-area-container">
+    <div class="modal-pop w-full max-w-sm bg-white/95 border-4 border-rose-200 rounded-3xl p-5 shadow-2xl text-center relative overflow-hidden">
+      <div class="animate-float mx-auto w-20 h-20 rounded-full bg-rose-50 border-2 border-rose-200 flex items-center justify-center text-4xl mb-3 shadow-sm">
+        😵‍💫🐰
+      </div>
+      <span class="inline-block bg-rose-100 text-rose-600 text-[11px] font-extrabold px-3 py-0.5 rounded-full mb-1">
+        💔 HẾT SẠCH 3 TIM NHIỆT HUYẾT!
+      </span>
+      <h3 class="text-xl font-extrabold text-rose-600">
+        Bé Thỏ Tụt Huyết Áp Rồi!
+      </h3>
+      <p id="gameOverReason" class="text-xs font-bold text-gray-600 mt-1 mb-3">
+        Sóng gió dập dồn quá, mới đạt được <span id="gameOverScore" class="text-rose-600 font-extrabold">0</span>/2010 điểm thôi!
+      </p>
+      <div class="bg-amber-50 border border-amber-200 rounded-2xl p-3 text-xs font-semibold text-amber-800 mb-4">
+        💡 Mẹo: Chạm 2 lần liên tiếp để <strong>Nhảy Đúp</strong> qua các chướng ngại vật bay lượn hoặc nhảy tưng tưng nhé!
+      </div>
+      <button id="retryGameOverBtn" class="btn-pastel-pink w-full py-3.5 rounded-2xl text-white font-extrabold text-base tracking-wide flex items-center justify-center gap-2">
+        <span>🧋 UỐNG TRÀ SỮA CHẠY LẠI</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       MÀN HÌNH VÒNG QUAY MAY MẮN 20/10 (LUCKY WHEEL SCREEN)
+       ========================================================================== -->
+  <div id="wheelScreen" class="hidden fixed inset-0 z-30 flex flex-col items-center justify-between p-3 bg-gradient-to-b from-pink-100/95 via-amber-50/95 to-emerald-50/95 backdrop-blur-md safe-area-container">
+    
+    <!-- Tiêu đề Vòng quay -->
+    <div class="w-full max-w-md text-center mt-1">
+      <div class="inline-flex items-center gap-1.5 bg-rose-100 border border-rose-200 text-rose-600 px-3 py-1 rounded-full text-xs font-extrabold mb-1 shadow-sm">
+        <span>🎉 Xuất sắc vượt sóng gió đạt 2010 điểm!</span>
+      </div>
+      <h2 class="text-xl sm:text-2xl font-extrabold text-rose-600 drop-shadow-sm">
+        Vòng Quay Quà Tặng 20/10 🎁
+      </h2>
+      <p id="wheelSubHint" class="text-xs font-bold text-gray-600 mt-0.5 px-2">
+        Bấm nút <span class="text-rose-500">"QUAY NGAY"</span> để nhận phần thưởng xứng đáng nhé!
+      </p>
+    </div>
+
+    <!-- Khu vực Vòng Quay Canvas + Kim chỉ thưởng -->
+    <div class="relative flex items-center justify-center my-1">
+      <!-- Vòng hào quang trang trí -->
+      <div class="absolute -inset-3 rounded-full bg-gradient-to-tr from-pink-300 via-amber-200 to-teal-200 opacity-60 blur-md pointer-events-none"></div>
+
+      <!-- Kim chỉ thưởng ở đỉnh trên cùng (hướng xuống tâm vòng quay) -->
+      <div id="wheelPointer" class="absolute -top-4 left-1/2 -translate-x-1/2 z-20 pointer-events-none flex flex-col items-center">
+        <div class="bg-rose-500 text-white text-[10px] font-extrabold px-2 py-0.5 rounded-full shadow-md border border-white mb-0.5 whitespace-nowrap">
+          👇 TRÚNG Ô NÀY
+        </div>
+        <svg width="36" height="32" viewBox="0 0 36 32" class="drop-shadow-lg">
+          <path d="M18 30 L4 6 Q18 0 32 6 Z" fill="#FB6F92" stroke="#FFFFFF" stroke-width="3" stroke-linejoin="round" />
+          <circle cx="18" cy="10" r="4" fill="#FFF9DB" />
+        </svg>
+      </div>
+
+      <!-- Canvas Vòng Quay (Hỗ trợ cả nút Quay và Kéo Tay Ăn Gian) -->
+      <canvas id="wheelCanvas" width="320" height="320" class="relative z-10 rounded-full shadow-2xl border-4 border-white cursor-grab active:cursor-grabbing"></canvas>
+    </div>
+
+    <!-- Hộp thông báo kết quả tạm thời -->
+    <div class="w-full max-w-md flex flex-col items-center gap-2 mb-1">
+      <div id="wheelStatusBox" class="w-full bg-white/90 border-2 border-pink-200 rounded-2xl p-3 text-center shadow-md min-h-[68px] flex flex-col items-center justify-center">
+        <p id="wheelResultTitle" class="text-sm font-extrabold text-rose-600">
+          ✨ Sẵn sàng nhận quà 20/10 chưa Bé Thỏ ơi?
+        </p>
+        <p id="wheelResultDesc" class="text-xs font-bold text-gray-600 mt-0.5">
+          Có 5 ô quà siêu xịn đang chờ trên vòng quay đó nha!
+        </p>
+      </div>
+
+      <!-- Nút bấm Quay Tự Động -->
+      <div class="w-full flex items-center gap-2">
+        <button id="spinWheelBtn" class="btn-pastel-pink flex-1 py-3.5 rounded-2xl text-white font-extrabold text-base tracking-wide flex items-center justify-center gap-2">
+          <span>🎰 QUAY NGAY</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       POPUP CHÚC MỪNG ĐƠN GIẢN KHI TRÚNG CÁC GIẢI THƯỞNG LẺ (CHỈ CÓ NÚT X ĐỂ ĐÓNG)
+       ========================================================================== -->
+  <div id="normalPrizeModal" class="hidden fixed inset-0 z-40 flex items-center justify-center p-4 bg-pink-950/40 backdrop-blur-sm safe-area-container">
+    <div class="modal-pop w-full max-w-xs bg-white border-4 border-pink-200 rounded-3xl p-5 pt-6 shadow-xl text-center relative">
+      <!-- Nút X tắt popup ở góc phải trên -->
+      <button id="closeNormalPrizeBtn" aria-label="Đóng" class="absolute top-3 right-3 w-8 h-8 rounded-full bg-pink-50 hover:bg-pink-100 border border-pink-200 text-rose-500 font-extrabold text-sm flex items-center justify-center shadow-sm active:scale-90 transition-transform">
+        ✕
+      </button>
+
+      <div id="normalPrizeEmoji" class="mx-auto w-16 h-16 rounded-2xl bg-pink-50 border-2 border-pink-200 flex items-center justify-center text-3xl mb-2.5 shadow-sm">
+        🎁
+      </div>
+
+      <span class="inline-block bg-pink-100 text-rose-600 text-[11px] font-extrabold px-3 py-0.5 rounded-full mb-1">
+        🎉 QUÀ TẶNG 20/10
+      </span>
+
+      <h3 class="text-lg font-extrabold text-gray-800 leading-snug">
+        Chúc Mừng Bé Thỏ! 🌸
+      </h3>
+
+      <p class="text-xs font-semibold text-gray-500 mt-1">
+        Bạn vừa quay trúng phần quà:
+      </p>
+
+      <div class="bg-pink-50/80 border border-pink-200 rounded-2xl py-2.5 px-3 my-3">
+        <p id="normalPrizeName" class="text-sm font-extrabold text-rose-600">
+          Quyển sổ sticker
+        </p>
+      </div>
+
+      <p class="text-xs font-semibold text-gray-600 mb-1 leading-relaxed">
+        Chúc em ngày 20/10 thật nhiều niềm vui và luôn nở nụ cười thật tươi nhé! 💕
+      </p>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       POPUP THIỆP CHÚC MỪNG 20/10 KHI TRÚNG Ô "ALL"
+       ========================================================================== -->
+  <div id="victoryModal" class="hidden fixed inset-0 z-40 flex items-center justify-center p-4 bg-rose-950/50 backdrop-blur-md safe-area-container">
+    <div class="modal-pop w-full max-w-sm max-h-[88dvh] overflow-y-auto no-scrollbar bg-white border-4 border-pink-300 rounded-3xl p-5 shadow-2xl text-center relative">
+      
+      <!-- Vương miện & Hoa -->
+      <div class="animate-float mx-auto w-20 h-20 rounded-full bg-gradient-to-tr from-pink-200 via-rose-100 to-amber-100 border-4 border-white shadow-lg flex items-center justify-center text-4xl mb-2">
+        👑🐰💐
+      </div>
+
+      <span class="inline-block bg-gradient-to-r from-rose-500 to-pink-500 text-white text-xs font-extrabold px-3 py-1 rounded-full shadow-sm mb-2">
+        🎆 JACKPOT 20/10: TRÚNG TRỌN BỘ "ALL"!
+      </span>
+
+      <h3 class="text-xl font-extrabold text-rose-600 leading-snug">
+        Chúc Mừng 20/10<br/>Bé Thỏ Của Anh! 💖
+      </h3>
+
+      <p class="text-xs font-bold text-gray-500 mt-1 mb-3">
+        Nhờ tuyệt kỹ "bàn tay vàng" xoay vòng quay, em đã ẵm trọn toàn bộ giải thưởng gồm:
+      </p>
+
+      <!-- Danh sách trọn bộ quà ALL -->
+      <div class="bg-gradient-to-br from-pink-50 to-amber-50 border-2 border-pink-200 rounded-2xl p-3 text-left space-y-2 mb-4 shadow-inner">
+        <div class="flex items-center gap-2.5 bg-white/90 p-2 rounded-xl border border-pink-100">
+          <span class="text-xl">📒</span>
+          <div>
+            <p class="text-xs font-extrabold text-gray-800">1. Quyển sổ sticker siêu cưng</p>
+            <p class="text-[10px] font-semibold text-gray-500">Tha hồ dán trang trí sổ tay mỗi ngày</p>
+          </div>
+          <span class="ml-auto text-xs font-extrabold text-emerald-600">✔ Đã chốt</span>
+        </div>
+
+        <div class="flex items-center gap-2.5 bg-white/90 p-2 rounded-xl border border-pink-100">
+          <span class="text-xl">🖍️</span>
+          <div>
+            <p class="text-xs font-extrabold text-gray-800">2. 1 cây bút đỏ + 2 cây bút đỏ</p>
+            <p class="text-[10px] font-semibold text-gray-500">Tổng cộng 3 cây bút đỏ chấm bài mỏi tay</p>
+          </div>
+          <span class="ml-auto text-xs font-extrabold text-emerald-600">✔ Đã chốt</span>
+        </div>
+
+        <div class="flex items-center gap-2.5 bg-rose-50 p-2 rounded-xl border border-rose-200">
+          <span class="text-xl">💖</span>
+          <div>
+            <p class="text-xs font-extrabold text-rose-600">3. Tình yêu vô bờ bến của MinMin</p>
+            <p class="text-[10px] font-semibold text-rose-400">Bảo hành trọn đời, thương chiều mỗi ngày!</p>
+          </div>
+          <span class="ml-auto text-xs font-extrabold text-rose-600">♾️ Mãi mãi</span>
+        </div>
+      </div>
+
+      <!-- Lời chúc ngọt ngào -->
+      <div class="bg-amber-50/90 border border-amber-200 rounded-2xl p-3.5 text-xs text-gray-700 font-semibold leading-relaxed mb-4 text-left relative">
+        <span class="text-lg absolute -top-3 right-3">💌</span>
+        <p class="italic">
+          "Gửi Bé Thỏ đáng yêu nhất thế gian! Chúc em ngày Phụ nữ Việt Nam 20/10 luôn rạng rỡ, tràn ngập tiếng cười, mọi việc suôn sẻ và lúc nào cũng có <strong class="text-rose-600">MinMin</strong> ở bên tiếp trà sữa, yêu thương em vô điều kiện nhé!"
+        </p>
+        <p class="text-right font-extrabold text-rose-500 mt-1.5">— Yêu em nhiều, MinMin 🐰❤️ —</p>
+      </div>
+
+      <!-- Nút tương tác cuối -->
+      <div class="flex flex-col sm:flex-row gap-2">
+        <button id="fireworkAgainBtn" class="btn-pastel-pink flex-1 py-3 rounded-2xl text-white font-extrabold text-sm flex items-center justify-center gap-1.5">
+          <span>🎆 Bắn Pháo Hoa Tiếp</span>
+        </button>
+        <button id="replayGameBtn" class="btn-pastel-mint py-3 px-4 rounded-2xl text-white font-extrabold text-sm flex items-center justify-center gap-1.5">
+          <span>🔄 Chơi Lại</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       JAVASCRIPT: TOÀN BỘ LOGIC GAME, ÂM THANH & VÒNG QUAY KÉO TAY
+       ========================================================================== -->
+  <script>
+    (function () {
+      'use strict';
+
+      /* ------------------------------------------------------------------------
+         2. HỆ THỐNG ÂM THANH & NHẠC NỀN WEB AUDIO API (KHÔNG DÙNG FILE NGOÀI)
+         ------------------------------------------------------------------------ */
+      const SoundFX = {
+        ctx: null,
+        muted: false,
+        bgmTimer: null,
+        bgmStep: 0,
+        bgmMode: null, // 'RUNNER' | 'WHEEL' | 'VICTORY' | null
+        isWheelSpinning: false,
+
+        init() {
+          if (!this.ctx) {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (AudioCtx) {
+              this.ctx = new AudioCtx();
+            }
+          }
+          if (this.ctx && this.ctx.state === 'suspended') {
+            this.ctx.resume();
+          }
+        },
+
+        // Hàm phát âm thanh có lọc âm trầm ấm (như đàn Kalimba / Hộp nhạc Celesta, không bị chói trên loa điện thoại)
+        playTone(freq, type, duration, delay = 0, vol = 0.14, slideTo = null) {
+          if (this.muted || !freq) return;
+          this.init();
+          if (!this.ctx) return;
+
+          const now = this.ctx.currentTime + delay;
+          const osc = this.ctx.createOscillator();
+          const filter = this.ctx.createBiquadFilter();
+          const gain = this.ctx.createGain();
+
+          osc.type = type;
+          osc.frequency.setValueAtTime(freq, now);
+          if (slideTo) {
+            osc.frequency.exponentialRampToValueAtTime(slideTo, now + duration);
+          }
+
+          // Bộ lọc Low-pass làm mềm âm thanh, nghe tròn trịa dễ thương
+          filter.type = 'lowpass';
+          filter.frequency.setValueAtTime(2400, now);
+
+          gain.gain.setValueAtTime(0.0001, now);
+          gain.gain.linearRampToValueAtTime(vol, now + 0.018);
+          gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+
+          osc.connect(filter);
+          filter.connect(gain);
+          gain.connect(this.ctx.destination);
+
+          osc.start(now);
+          osc.stop(now + duration + 0.025);
+        },
+
+        // Hàm gảy hợp âm hộp nhạc (Music Box / Harp) êm dịu
+        playChord(freqs, duration = 0.45, vol = 0.03) {
+          if (this.muted || !freqs || !freqs.length) return;
+          freqs.forEach((f, idx) => {
+            this.playTone(f, 'sine', duration, idx * 0.025, vol);
+          });
+        },
+
+        // Nhạc nền tự động theo từng màn chơi: RUNNER (Chạy) | WHEEL (Vòng quay) | VICTORY (Thiệp 20/10)
+        startBGM(mode = 'RUNNER') {
+          this.init();
+          if (this.bgmMode === mode && this.bgmTimer) return;
+          this.stopBGM();
+          this.bgmMode = mode;
+          this.bgmStep = 0;
+
+          // 1. Giai điệu khi đang chạy (Kawaii Pastel Upbeat)
+          const runnerMelody = [
+            523.25, 659.25, 783.99, 659.25, 880.00, 783.99, 659.25, 587.33,
+            523.25, 587.33, 659.25, 783.99, 659.25, 587.33, 523.25, 0,
+            698.46, 880.00, 1046.5, 880.00, 783.99, 659.25, 587.33, 659.25,
+            587.33, 659.25, 783.99, 880.00, 783.99, 659.25, 523.25, 0
+          ];
+          const runnerBass = [
+            261.63, 0, 392.00, 0, 349.23, 0, 392.00, 0,
+            261.63, 0, 392.00, 0, 293.66, 392.00, 261.63, 0,
+            349.23, 0, 440.00, 0, 392.00, 0, 329.63, 0,
+            293.66, 0, 392.00, 0, 329.63, 392.00, 261.63, 0
+          ];
+
+          // 2. Giai điệu Vòng Quay May Mắn (Phong cách Gacha / Kalimba Cafe hồi hộp, dễ thương, êm tai)
+          // Vòng hợp âm: Fmaj7 -> G6 -> Em7 -> Am7 -> Dm7 -> G7 -> Cmaj7
+          const wheelMelody = [
+            659.25, 783.99, 880.00, 783.99, 659.25, 587.33, 523.25, 587.33,
+            659.25, 783.99, 659.25, 523.25, 587.33, 0,      493.88, 523.25,
+            587.33, 659.25, 783.99, 659.25, 587.33, 523.25, 493.88, 587.33,
+            523.25, 659.25, 783.99, 880.00, 783.99, 659.25, 523.25, 0
+          ];
+          const wheelBass = [
+            349.23, 0, 440.00, 0, 392.00, 0, 493.88, 0,
+            329.63, 0, 392.00, 0, 440.00, 0, 329.63, 0,
+            293.66, 0, 349.23, 0, 392.00, 0, 293.66, 0,
+            261.63, 0, 329.63, 0, 392.00, 329.63, 261.63, 0
+          ];
+          const wheelChords = {
+            0: [349.23, 440.00, 523.25],  // F
+            8: [329.63, 392.00, 493.88],  // Em
+            16: [293.66, 349.23, 440.00], // Dm
+            24: [261.63, 329.63, 392.00]  // C
+          };
+
+          // 3. Giai điệu Hộp Nhạc Lãng Mạn khi mở Thiệp 20/10 (Sweet Music Box Waltz)
+          const victoryMelody = [
+            523.25, 659.25, 783.99, 659.25, 880.00, 783.99, 659.25, 523.25,
+            587.33, 698.46, 880.00, 698.46, 783.99, 659.25, 587.33, 0,
+            523.25, 659.25, 783.99, 1046.5, 880.00, 783.99, 659.25, 587.33,
+            523.25, 587.33, 659.25, 783.99, 659.25, 587.33, 523.25, 0
+          ];
+          const victoryBass = [
+            261.63, 329.63, 392.00, 329.63, 349.23, 440.00, 523.25, 440.00,
+            293.66, 349.23, 440.00, 349.23, 392.00, 493.88, 587.33, 392.00,
+            261.63, 329.63, 392.00, 329.63, 349.23, 440.00, 523.25, 440.00,
+            293.66, 392.00, 493.88, 392.00, 261.63, 329.63, 392.00, 261.63
+          ];
+
+          const stepTime = mode === 'WHEEL' ? 230 : (mode === 'VICTORY' ? 240 : 195);
+
+          this.bgmTimer = setInterval(() => {
+            if (this.muted) return;
+
+            if (this.bgmMode === 'RUNNER') {
+              const idx = this.bgmStep % runnerMelody.length;
+              const note = runnerMelody[idx];
+              const bass = runnerBass[idx];
+              if (note > 0) this.playTone(note, 'triangle', 0.14, 0, 0.045);
+              if (bass > 0) this.playTone(bass, 'sine', 0.17, 0, 0.035);
+            } else if (this.bgmMode === 'WHEEL') {
+              // Khi vòng quay đang xoay tít, hạ nhỏ nhạc nền để tiếng chuông xoay vòng quay nổi bật hơn
+              const volScale = this.isWheelSpinning ? 0.35 : 1.0;
+              const idx = this.bgmStep % wheelMelody.length;
+              const note = wheelMelody[idx];
+              const bass = wheelBass[idx];
+              if (wheelChords[idx]) {
+                this.playChord(wheelChords[idx], 0.55, 0.025 * volScale);
+              }
+              if (note > 0) {
+                // Kết hợp sóng sine và triangle tạo tiếng chuông Kalimba tròn trịa
+                this.playTone(note, 'sine', 0.24, 0, 0.06 * volScale);
+                this.playTone(note * 2, 'sine', 0.12, 0, 0.015 * volScale);
+              }
+              if (bass > 0) {
+                this.playTone(bass, 'triangle', 0.22, 0, 0.038 * volScale);
+              }
+            } else if (this.bgmMode === 'VICTORY') {
+              const idx = this.bgmStep % victoryMelody.length;
+              const note = victoryMelody[idx];
+              const bass = victoryBass[idx];
+              if (note > 0) {
+                this.playTone(note, 'sine', 0.32, 0, 0.065);
+                this.playTone(note * 2, 'sine', 0.18, 0.01, 0.018);
+              }
+              if (bass > 0) {
+                this.playTone(bass, 'sine', 0.28, 0, 0.035);
+              }
+            }
+            this.bgmStep++;
+          }, stepTime);
+        },
+
+        stopBGM() {
+          if (this.bgmTimer) {
+            clearInterval(this.bgmTimer);
+            this.bgmTimer = null;
+          }
+          this.bgmMode = null;
+        },
+
+        jump(isDouble = false) {
+          if (!isDouble) {
+            this.playTone(360, 'sine', 0.16, 0, 0.15, 620);
+          } else {
+            this.playTone(520, 'triangle', 0.12, 0, 0.15, 780);
+            this.playTone(780, 'sine', 0.15, 0.07, 0.14, 1040);
+          }
+        },
+
+        collect() {
+          this.playTone(587.33, 'sine', 0.1, 0, 0.15);     // D5
+          this.playTone(880, 'triangle', 0.16, 0.07, 0.16); // A5
+          this.playTone(1174.66, 'sine', 0.2, 0.14, 0.15);  // D6
+        },
+
+        bump() {
+          this.playTone(220, 'sawtooth', 0.14, 0, 0.11, 130);
+          this.playTone(160, 'triangle', 0.18, 0.08, 0.11, 110);
+        },
+
+        gameOverSad() {
+          this.stopBGM();
+          const sadNotes = [440, 415.3, 392, 349.23];
+          sadNotes.forEach((f, i) => {
+            this.playTone(f, 'sawtooth', 0.24, i * 0.18, 0.09);
+          });
+        },
+
+        milestone2010() {
+          // Nhạc hiệu hoàn thành đường chạy 2010 điểm
+          const notes = [
+            { f: 523.25, t: 0.00, d: 0.16 },
+            { f: 659.25, t: 0.12, d: 0.16 },
+            { f: 783.99, t: 0.24, d: 0.16 },
+            { f: 1046.5, t: 0.36, d: 0.35 }
+          ];
+          notes.forEach(n => {
+            this.playTone(n.f, 'sine', n.d, n.t, 0.16);
+            this.playTone(n.f * 0.5, 'triangle', n.d, n.t, 0.08);
+          });
+        },
+
+        // Tiếng "tách" kết hợp nốt nhạc Kalimba Ngũ Cung khi kim đi qua từng ô trên vòng quay
+        tick(sliceIndex = 0) {
+          // 5 ô tương ứng với 5 nốt ngũ cung: Đô - Rê - Mi - Sol - La (C5, D5, E5, G5, A5)
+          const pentatonicNotes = [523.25, 587.33, 659.25, 783.99, 880.00];
+          const noteFreq = pentatonicNotes[Math.abs(sliceIndex) % pentatonicNotes.length];
+          // Âm chuông gỗ Kalimba êm tai
+          this.playTone(noteFreq, 'sine', 0.09, 0, 0.11);
+          // Tiếng gõ nhẹ vào chốt vòng quay
+          this.playTone(noteFreq * 1.5, 'triangle', 0.03, 0, 0.04, noteFreq * 0.8);
+        },
+
+        winNormalPrize() {
+          const notes = [523.25, 659.25, 783.99, 1046.5];
+          notes.forEach((f, idx) => {
+            this.playTone(f, 'sine', 0.24, idx * 0.085, 0.14);
+            this.playTone(f * 0.5, 'triangle', 0.24, idx * 0.085, 0.06);
+          });
+        },
+
+        winAllFanfare() {
+          // Chuông ngân chiến thắng lung linh khi trúng trọn bộ ALL + chuyển sang nhạc Hộp Nhạc Lãng Mạn
+          const melody = [
+            { f: 523.25, d: 0.16, t: 0.00 }, // C5
+            { f: 659.25, d: 0.16, t: 0.11 }, // E5
+            { f: 783.99, d: 0.16, t: 0.22 }, // G5
+            { f: 1046.5, d: 0.30, t: 0.34 }, // C6
+            { f: 880.00, d: 0.16, t: 0.65 }, // A5
+            { f: 1046.5, d: 0.45, t: 0.80 }  // C6
+          ];
+          melody.forEach(m => {
+            this.playTone(m.f, 'sine', m.d, m.t, 0.16);
+            this.playTone(m.f * 0.5, 'triangle', m.d, m.t, 0.08);
+          });
+          setTimeout(() => {
+            if (gameState === 'VICTORY' || gameState === 'WHEEL') {
+              this.startBGM('VICTORY');
+            }
+          }, 1250);
+        }
+      };
+
+      /* ------------------------------------------------------------------------
+         3. QUẢN LÝ PHÁO HOA CONFETTI TOÀN MÀN HÌNH
+         ------------------------------------------------------------------------ */
+      const confettiCanvas = document.getElementById('confettiCanvas');
+      const confettiCtx = confettiCanvas.getContext('2d');
+      let confettiParticles = [];
+      let confettiAnimId = null;
+
+      function resizeConfettiCanvas() {
+        confettiCanvas.width = window.innerWidth;
+        confettiCanvas.height = window.innerHeight;
+      }
+      window.addEventListener('resize', resizeConfettiCanvas);
+      resizeConfettiCanvas();
+
+      function launchConfetti(burstCount = 130) {
+        const colors = ['#FF8FAB', '#FB6F92', '#FFD166', '#06D6A0', '#A8DADC', '#C77DFF', '#FFCAD4'];
+        for (let i = 0; i < burstCount; i++) {
+          confettiParticles.push({
+            x: window.innerWidth * (0.2 + Math.random() * 0.6),
+            y: window.innerHeight * 0.35 + (Math.random() - 0.5) * 80,
+            vx: (Math.random() - 0.5) * 14,
+            vy: -Math.random() * 14 - 4,
+            size: 6 + Math.random() * 7,
+            color: colors[Math.floor(Math.random() * colors.length)],
+            rotation: Math.random() * Math.PI * 2,
+            vr: (Math.random() - 0.5) * 0.25,
+            gravity: 0.26 + Math.random() * 0.1,
+            shape: Math.random() > 0.35 ? 'rect' : 'circle',
+            alpha: 1
+          });
+        }
+        if (!confettiAnimId) {
+          updateConfetti();
+        }
+      }
+
+      function updateConfetti() {
+        confettiCtx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+        for (let i = confettiParticles.length - 1; i >= 0; i--) {
+          const p = confettiParticles[i];
+          p.x += p.vx;
+          p.y += p.vy;
+          p.vy += p.gravity;
+          p.vx *= 0.99;
+          p.rotation += p.vr;
+
+          if (p.y > confettiCanvas.height + 30) {
+            confettiParticles.splice(i, 1);
+            continue;
+          }
+
+          confettiCtx.save();
+          confettiCtx.translate(p.x, p.y);
+          confettiCtx.rotate(p.rotation);
+          confettiCtx.fillStyle = p.color;
+          if (p.shape === 'rect') {
+            confettiCtx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * 0.65);
+          } else {
+            confettiCtx.beginPath();
+            confettiCtx.arc(0, 0, p.size * 0.45, 0, Math.PI * 2);
+            confettiCtx.fill();
+          }
+          confettiCtx.restore();
+        }
+
+        if (confettiParticles.length > 0) {
+          confettiAnimId = requestAnimationFrame(updateConfetti);
+        } else {
+          confettiAnimId = null;
+        }
+      }
+
+      /* ------------------------------------------------------------------------
+         4. GAMEPLAY ENDLESS RUNNER: BÉ THỎ CÔ GIÁO VƯỢT SÓNG GIÓ
+         ------------------------------------------------------------------------ */
+      const runnerCanvas = document.getElementById('runnerCanvas');
+      const ctx = runnerCanvas.getContext('2d');
+
+      const scoreTextEl = document.getElementById('scoreText');
+      const heartsContainerEl = document.getElementById('heartsContainer');
+      const progressBarEl = document.getElementById('progressBar');
+      const progressLabelEl = document.getElementById('progressLabel');
+      const startScreenEl = document.getElementById('startScreen');
+      const gameOverModalEl = document.getElementById('gameOverModal');
+      const gameOverScoreEl = document.getElementById('gameOverScore');
+      const gameOverReasonEl = document.getElementById('gameOverReason');
+      const wheelScreenEl = document.getElementById('wheelScreen');
+      const normalPrizeModalEl = document.getElementById('normalPrizeModal');
+      const normalPrizeEmojiEl = document.getElementById('normalPrizeEmoji');
+      const normalPrizeNameEl = document.getElementById('normalPrizeName');
+      const victoryModalEl = document.getElementById('victoryModal');
+      const touchHintBarEl = document.getElementById('touchHintBar');
+
+      const TARGET_SCORE = 2010;
+      const MAX_LIVES = 3;
+      const HIT_SCORE_PENALTY = 150;
+
+      let gameState = 'START'; // 'START' | 'PLAYING' | 'GAMEOVER' | 'MILESTONE' | 'WHEEL' | 'VICTORY'
+      let score = 0;
+      let lives = MAX_LIVES;
+      let lastFrameTime = performance.now();
+
+      // Kích thước logic của Canvas
+      let viewW = window.innerWidth;
+      let viewH = window.innerHeight;
+      let groundY = viewH * 0.76;
+
+      function resizeRunnerCanvas() {
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        viewW = window.innerWidth;
+        viewH = window.innerHeight;
+        runnerCanvas.width = viewW * dpr;
+        runnerCanvas.height = viewH * dpr;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        groundY = Math.min(viewH - 95, Math.max(viewH * 0.74, 340));
+        if (bunny) {
+          bunny.x = Math.min(95, viewW * 0.22);
+          if (bunny.onGround) bunny.y = groundY;
+        }
+      }
+
+      // Nhân vật Cô Giáo Thỏ
+      const bunny = {
+        x: 80,
+        y: 300,
+        vy: 0,
+        w: 56,
+        h: 64,
+        gravity: 0.78,
+        jumpForce: -14.6,
+        doubleJumpForce: -13.0,
+        jumpsUsed: 0,
+        maxJumps: 2,
+        onGround: true,
+        runCycle: 0,
+        invincibleTimer: 0,
+        speechText: '',
+        speechTimer: 0
+      };
+
+      // Danh sách Chướng ngại vật đậm chất giáo viên tiểu học
+      const OBSTACLE_TYPES = [
+        {
+          emoji: '💬',
+          label: 'Tin nhắn Zalo phụ huynh',
+          bg: '#FFE5EC',
+          border: '#FF8FAB',
+          textColor: '#C9184A',
+          quote: 'Ối! Phụ huynh nhắn hỏi bài lúc nửa đêm!'
+        },
+        {
+          emoji: '📞',
+          label: 'Cuộc gọi Zalo réo giờ nghỉ',
+          bg: '#FFF3B0',
+          border: '#F4A261',
+          textColor: '#B5651D',
+          quote: 'Đang nghỉ trưa mà Zalo réo inh ỏi!'
+        },
+        {
+          emoji: '📚',
+          label: 'Chồng vở tập viết cần chấm',
+          bg: '#E0FBFC',
+          border: '#48CAE4',
+          textColor: '#0077B6',
+          quote: 'Chấm 40 quyển vở tập viết mỏi tay quá!'
+        },
+        {
+          emoji: '🏫',
+          label: 'Tiết thao giảng cấp trường',
+          bg: '#E8E8FF',
+          border: '#9D4EDD',
+          textColor: '#5A189A',
+          quote: 'Thao giảng cấp trường hồi hộp quá đi!'
+        }
+      ];
+
+      // Danh sách Vật phẩm cộng điểm (Đã cộng thêm +50 điểm mỗi loại theo yêu cầu)
+      const ITEM_TYPES = [
+        { emoji: '🧋', label: 'Trà sữa', points: 130, color: '#D97706', bg: '#FEF3C7' },
+        { emoji: '🥕', label: 'Cà rốt tiếp sức', points: 110, color: '#EA580C', bg: '#FFEDD5' },
+        { emoji: '🌸', label: 'Hoa 20/10', points: 170, color: '#E11D48', bg: '#FFE4E6' }
+      ];
+
+      let obstacles = [];
+      let collectibles = [];
+      let floatingTexts = [];
+      let jumpParticles = [];
+      let clouds = [];
+      let sakuraPetals = [];
+
+      let obstacleSpawnTimer = 0;
+      let itemSpawnTimer = 0;
+      let gameSpeed = 4.6;
+
+      // Khởi tạo mây và cánh hoa anh đào bay trong nền
+      function initScenery() {
+        clouds = [];
+        for (let i = 0; i < 5; i++) {
+          clouds.push({
+            x: Math.random() * viewW,
+            y: 75 + Math.random() * (groundY * 0.42),
+            scale: 0.7 + Math.random() * 0.6,
+            speed: 0.35 + Math.random() * 0.4
+          });
+        }
+        sakuraPetals = [];
+        for (let i = 0; i < 16; i++) {
+          sakuraPetals.push({
+            x: Math.random() * viewW,
+            y: Math.random() * groundY,
+            size: 5 + Math.random() * 5,
+            vx: -0.7 - Math.random() * 0.8,
+            vy: 0.5 + Math.random() * 0.7,
+            angle: Math.random() * Math.PI * 2,
+            va: (Math.random() - 0.5) * 0.04
+          });
+        }
+      }
+
+      // Hàm cho Cô giáo Thỏ nhảy (hỗ trợ Double Jump)
+      function triggerBunnyJump() {
+        if (gameState !== 'PLAYING') return;
+
+        if (bunny.onGround) {
+          bunny.vy = bunny.jumpForce;
+          bunny.onGround = false;
+          bunny.jumpsUsed = 1;
+          SoundFX.jump(false);
+          spawnJumpEffects(bunny.x, bunny.y, '💨');
+        } else if (bunny.jumpsUsed < bunny.maxJumps) {
+          bunny.vy = bunny.doubleJumpForce;
+          bunny.jumpsUsed = 2;
+          SoundFX.jump(true);
+          spawnJumpEffects(bunny.x, bunny.y - 10, '💖');
+        }
+      }
+
+      function spawnJumpEffects(x, y, symbol) {
+        for (let i = 0; i < 6; i++) {
+          jumpParticles.push({
+            x: x + (Math.random() - 0.5) * 26,
+            y: y - 5,
+            vx: (Math.random() - 0.5) * 3.5,
+            vy: Math.random() * 2 + 0.5,
+            alpha: 1,
+            symbol: symbol,
+            size: 12 + Math.random() * 6
+          });
+        }
+      }
+
+      function addFloatingText(text, x, y, color = '#E11D48') {
+        floatingTexts.push({
+          text,
+          x,
+          y,
+          vy: -1.6,
+          alpha: 1,
+          color
+        });
+      }
+
+      // Khởi tạo / Chơi lại từ đầu
+      function startRunnerGame() {
+        SoundFX.init();
+        SoundFX.startBGM('RUNNER');
+        score = 0;
+        lives = MAX_LIVES;
+        obstacles = [];
+        collectibles = [];
+        floatingTexts = [];
+        jumpParticles = [];
+        obstacleSpawnTimer = 35;
+        itemSpawnTimer = 95;
+        gameSpeed = Math.min(6.4, Math.max(5.4, viewW * 0.014));
+
+        bunny.y = groundY;
+        bunny.vy = 0;
+        bunny.onGround = true;
+        bunny.jumpsUsed = 0;
+        bunny.invincibleTimer = 0;
+        bunny.speechText = 'Cố lên! Đừng để đụng chướng ngại vật nhé! 💪';
+        bunny.speechTimer = 100;
+
+        updateScoreUI();
+        updateHeartsUI();
+        startScreenEl.classList.add('hidden');
+        gameOverModalEl.classList.add('hidden');
+        wheelScreenEl.classList.add('hidden');
+        normalPrizeModalEl.classList.add('hidden');
+        victoryModalEl.classList.add('hidden');
+        touchHintBarEl.classList.remove('hidden');
+
+        gameState = 'PLAYING';
+      }
+
+      function updateHeartsUI() {
+        let html = '';
+        for (let i = 0; i < MAX_LIVES; i++) {
+          html += i < lives ? '❤️' : '🖤';
+        }
+        heartsContainerEl.textContent = html;
+      }
+
+      function triggerGameOver(lastQuote) {
+        gameState = 'GAMEOVER';
+        SoundFX.gameOverSad();
+        touchHintBarEl.classList.add('hidden');
+        const finalScore = Math.floor(score);
+        gameOverScoreEl.textContent = finalScore;
+        gameOverReasonEl.innerHTML =
+          ` "${lastQuote}" — Bé Thỏ đã hết 3 Tim khi đang ở mốc <strong class="text-rose-600">${finalScore} / 2010 điểm</strong>!`;
+        gameOverModalEl.classList.remove('hidden');
+      }
+
+      function updateScoreUI() {
+        const displayScore = Math.min(TARGET_SCORE, Math.floor(score));
+        scoreTextEl.textContent = displayScore;
+        const pct = Math.min(100, Math.round((displayScore / TARGET_SCORE) * 100));
+        progressBarEl.style.width = pct + '%';
+        progressLabelEl.textContent = `Đường tới Vòng Quay 20/10: ${pct}% (${displayScore}/2010đ)`;
+      }
+
+      // Chuyển sang màn hình Vòng Quay May Mắn khi đủ 2010 điểm
+      function reach2010Milestone() {
+        if (gameState === 'MILESTONE' || gameState === 'WHEEL' || gameState === 'VICTORY') return;
+        score = TARGET_SCORE;
+        updateScoreUI();
+        gameState = 'MILESTONE';
+        touchHintBarEl.classList.add('hidden');
+        SoundFX.milestone2010();
+        SoundFX.startBGM('WHEEL');
+        launchConfetti(80);
+        bunny.speechText = 'Yay! Đủ 2010 điểm rùi! Mở Vòng Quay thôi! 🎉';
+        bunny.speechTimer = 120;
+
+        setTimeout(() => {
+          openWheelScreen();
+        }, 1100);
+      }
+
+      // Lắng nghe cảm ứng chạm nhảy trên Canvas (chống cuộn/zoom tuyệt đối)
+      runnerCanvas.addEventListener('touchstart', function (e) {
+        e.preventDefault(); // Chặn iOS Safari không cho scroll hay nháy màn hình
+        if (gameState === 'PLAYING') {
+          triggerBunnyJump();
+        }
+      }, { passive: false });
+
+      runnerCanvas.addEventListener('mousedown', function (e) {
+        if (gameState === 'PLAYING') {
+          triggerBunnyJump();
+        }
+      });
+
+      // Hỗ trợ phím Space / Mũi tên lên nếu chơi trên máy tính
+      window.addEventListener('keydown', function (e) {
+        if (e.code === 'Space' || e.code === 'ArrowUp') {
+          if (gameState === 'PLAYING') {
+            e.preventDefault();
+            triggerBunnyJump();
+          }
+        }
+      });
+
+      /* ------------------------------------------------------------------------
+         5. CẬP NHẬT & VẼ ĐỒ HỌA CANVAS CHO GAME RUNNER
+         ------------------------------------------------------------------------ */
+      function drawRoundedRect(context, x, y, width, height, radius, fill, stroke, strokeWidth = 2) {
+        context.beginPath();
+        context.moveTo(x + radius, y);
+        context.lineTo(x + width - radius, y);
+        context.quadraticCurveTo(x + width, y, x + width, y + radius);
+        context.lineTo(x + width, y + height - radius);
+        context.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+        context.lineTo(x + radius, y + height);
+        context.quadraticCurveTo(x, y + height, x, y + height - radius);
+        context.lineTo(x, y + radius);
+        context.quadraticCurveTo(x, y, x + radius, y);
+        context.closePath();
+        if (fill) {
+          context.fillStyle = fill;
+          context.fill();
+        }
+        if (stroke) {
+          context.strokeStyle = stroke;
+          context.lineWidth = strokeWidth;
+          context.stroke();
+        }
+      }
+
+      function updateRunner(dtFactor) {
+        // 1. Nền mây & hoa đào bay
+        clouds.forEach(c => {
+          c.x -= c.speed * dtFactor;
+          if (c.x < -120) c.x = viewW + 80;
+        });
+
+        sakuraPetals.forEach(p => {
+          p.x += p.vx * dtFactor;
+          p.y += p.vy * dtFactor;
+          p.angle += p.va * dtFactor;
+          if (p.y > groundY) {
+            p.y = -10;
+            p.x = Math.random() * viewW;
+          }
+          if (p.x < -20) {
+            p.x = viewW + 15;
+          }
+        });
+
+        if (gameState !== 'PLAYING') {
+          bunny.runCycle += 0.08 * dtFactor;
+          return;
+        }
+
+        // 2. Tăng tốc độ chạy dần theo phần trăm điểm đạt được
+        const progressRatio = Math.min(1, score / TARGET_SCORE);
+        const currentSpeed = gameSpeed + progressRatio * 2.4;
+
+        // Cộng điểm tự động nhẹ khi đang chạy bền bỉ
+        score = Math.min(TARGET_SCORE, score + 0.22 * dtFactor);
+        updateScoreUI();
+        if (score >= TARGET_SCORE) {
+          reach2010Milestone();
+          return;
+        }
+
+        // 3. Vật lý nhảy của Bé Thỏ
+        bunny.vy += bunny.gravity * dtFactor;
+        bunny.y += bunny.vy * dtFactor;
+
+        if (bunny.y >= groundY) {
+          bunny.y = groundY;
+          bunny.vy = 0;
+          bunny.onGround = true;
+          bunny.jumpsUsed = 0;
+        }
+
+        bunny.runCycle += 0.22 * dtFactor;
+        if (bunny.invincibleTimer > 0) bunny.invincibleTimer -= dtFactor;
+        if (bunny.speechTimer > 0) bunny.speechTimer -= dtFactor;
+
+        // 4. Sinh Chướng ngại vật biết di chuyển (Bay lượn lên xuống, nhảy tưng tưng, hoặc lao nhanh)
+        obstacleSpawnTimer -= dtFactor;
+        if (obstacleSpawnTimer <= 0) {
+          const type = OBSTACLE_TYPES[Math.floor(Math.random() * OBSTACLE_TYPES.length)];
+
+          // Chọn kiểu di chuyển của chướng ngại vật để tăng độ khó
+          const roll = Math.random();
+          let movePattern = 'static';
+          let baseY = groundY;
+          let ampY = 0;
+          let freqY = 0.06;
+          let speedMult = 1;
+
+          if (roll < 0.35) {
+            // Kiểu 1: Bay lượn lên xuống (Wave)
+            movePattern = 'wave';
+            baseY = groundY - 48;
+            ampY = 36 + Math.random() * 18;
+            freqY = 0.065 + Math.random() * 0.03;
+          } else if (roll < 0.65) {
+            // Kiểu 2: Nhảy tưng tưng trên mặt đất (Bounce)
+            movePattern = 'bounce';
+            baseY = groundY;
+            ampY = 48 + Math.random() * 24;
+            freqY = 0.075 + Math.random() * 0.025;
+          } else if (roll < 0.88) {
+            // Kiểu 3: Tăng tốc lao vút về phía trước (Surge)
+            movePattern = 'surge';
+            baseY = Math.random() < 0.4 ? groundY - 52 : groundY;
+            speedMult = 1.28 + Math.random() * 0.18;
+          }
+
+          obstacles.push({
+            x: viewW + 60,
+            y: baseY,
+            baseY: baseY,
+            w: 48,
+            h: 48,
+            movePattern,
+            phase: Math.random() * Math.PI * 2,
+            ampY,
+            freqY,
+            speedMult,
+            type
+          });
+          // Nhịp độ sinh vật cản nhanh và thử thách hơn khi điểm cao
+          const minGap = Math.max(46, 68 - progressRatio * 20);
+          obstacleSpawnTimer = minGap + Math.random() * 34;
+        }
+
+        // 5. Sinh Vật phẩm Trà sữa / Cà rốt / Hoa 20/10 (Rải rác thưa hơn)
+        itemSpawnTimer -= dtFactor;
+        if (itemSpawnTimer <= 0) {
+          const item = ITEM_TYPES[Math.floor(Math.random() * ITEM_TYPES.length)];
+          const heightOffset = [42, 105, 160][Math.floor(Math.random() * 3)];
+          collectibles.push({
+            x: viewW + 60,
+            y: groundY - heightOffset,
+            r: 23,
+            bobPhase: Math.random() * Math.PI * 2,
+            item
+          });
+          // Khoảng cách xuất hiện thưa hơn nhiều (từ 2.3s đến 4s mới có 1 cục điểm thưởng)
+          itemSpawnTimer = 140 + Math.random() * 105;
+        }
+
+        // 6. Cập nhật Chướng ngại vật di chuyển & Kiểm tra va chạm (Hitbox chuẩn xác, không bị ảo)
+        const bounceOffset = bunny.onGround ? Math.abs(Math.sin(bunny.runCycle)) * 6 : 0;
+        // Vùng lõi cơ thể thực tế của Bé Thỏ (bỏ qua phần rìa tai thỏ và nơ để nhảy qua sát mép không bị phạt oan)
+        const bunnyCoreLeft = bunny.x - 13;
+        const bunnyCoreRight = bunny.x + 13;
+        const bunnyCoreTop = (bunny.y - bounceOffset) - 52;
+        const bunnyCoreBottom = (bunny.y - bounceOffset) - 6;
+
+        for (let i = obstacles.length - 1; i >= 0; i--) {
+          const obs = obstacles[i];
+          obs.phase += obs.freqY * dtFactor;
+
+          // Tính tốc độ ngang và vị trí dọc theo kiểu di chuyển
+          let currentObsSpeed = currentSpeed * (obs.speedMult || 1);
+          if (obs.movePattern === 'wave') {
+            obs.y = Math.min(groundY, obs.baseY + Math.sin(obs.phase) * obs.ampY);
+          } else if (obs.movePattern === 'bounce') {
+            obs.y = obs.baseY - Math.abs(Math.sin(obs.phase)) * obs.ampY;
+          } else if (obs.movePattern === 'surge') {
+            currentObsSpeed = currentSpeed * (obs.speedMult + Math.sin(obs.phase * 1.5) * 0.18);
+          }
+
+          obs.x -= currentObsSpeed * dtFactor;
+
+          // Vùng lõi của khối chướng ngại vật (thu gọn 8px mỗi cạnh so với khung vẽ 48x48 để cảm giác nhảy mượt và thật mắt)
+          const obsCoreLeft = obs.x - (obs.w * 0.5 - 8);
+          const obsCoreRight = obs.x + (obs.w * 0.5 - 8);
+          const obsCoreTop = obs.y - obs.h + 8;
+          const obsCoreBottom = obs.y - 6;
+
+          const isColliding =
+            bunny.invincibleTimer <= 0 &&
+            bunnyCoreLeft < obsCoreRight &&
+            bunnyCoreRight > obsCoreLeft &&
+            bunnyCoreTop < obsCoreBottom &&
+            bunnyCoreBottom > obsCoreTop;
+
+          if (isColliding) {
+            SoundFX.bump();
+            lives = Math.max(0, lives - 1);
+            score = Math.max(0, score - HIT_SCORE_PENALTY);
+            updateHeartsUI();
+            updateScoreUI();
+
+            bunny.invincibleTimer = 45;
+            bunny.vy = -6.5;
+            bunny.onGround = false;
+            bunny.speechText = obs.type.quote;
+            bunny.speechTimer = 85;
+            addFloatingText(`-1 ❤️ (-${HIT_SCORE_PENALTY}đ)`, bunny.x, bunny.y - 80, '#E11D48');
+            obstacles.splice(i, 1);
+
+            if (lives <= 0) {
+              triggerGameOver(obs.type.quote);
+              return;
+            }
+            continue;
+          }
+
+          if (obs.x < -120) {
+            obstacles.splice(i, 1);
+          }
+        }
+
+        // 7. Cập nhật Vật phẩm cộng điểm (Kiểm tra va chạm với toàn bộ thân Bé Thỏ từ chân tới tai)
+        const bunnyPickupLeft = bunny.x - 20;
+        const bunnyPickupRight = bunny.x + 20;
+        const bunnyPickupTop = (bunny.y - bounceOffset) - 66;
+        const bunnyPickupBottom = bunny.y - bounceOffset;
+
+        for (let i = collectibles.length - 1; i >= 0; i--) {
+          const col = collectibles[i];
+          col.x -= currentSpeed * dtFactor;
+          col.bobPhase += 0.08 * dtFactor;
+
+          const cy = col.y + Math.sin(col.bobPhase) * 6;
+          // Tìm điểm gần nhất trên khung người Bé Thỏ tới tâm vật phẩm
+          const closestX = Math.max(bunnyPickupLeft, Math.min(col.x, bunnyPickupRight));
+          const closestY = Math.max(bunnyPickupTop, Math.min(cy, bunnyPickupBottom));
+          const dist = Math.hypot(col.x - closestX, cy - closestY);
+
+          if (dist < col.r + 6) {
+            // Nhặt thành công!
+            SoundFX.collect();
+            score = Math.min(TARGET_SCORE, score + col.item.points);
+            updateScoreUI();
+            addFloatingText(`+${col.item.points}đ ${col.item.emoji}`, col.x, cy - 15, col.item.color);
+            bunny.speechText = `Tuyệt vời! +${col.item.points}đ (${col.item.label})`;
+            bunny.speechTimer = 60;
+            collectibles.splice(i, 1);
+
+            if (score >= TARGET_SCORE) {
+              reach2010Milestone();
+              return;
+            }
+            continue;
+          }
+
+          if (col.x < -80) {
+            collectibles.splice(i, 1);
+          }
+        }
+
+        // 8. Cập nhật hiệu ứng hạt nhảy & chữ bay
+        for (let i = jumpParticles.length - 1; i >= 0; i--) {
+          const jp = jumpParticles[i];
+          jp.x += jp.vx * dtFactor;
+          jp.y += jp.vy * dtFactor;
+          jp.alpha -= 0.03 * dtFactor;
+          if (jp.alpha <= 0) jumpParticles.splice(i, 1);
+        }
+
+        for (let i = floatingTexts.length - 1; i >= 0; i--) {
+          const ft = floatingTexts[i];
+          ft.y += ft.vy * dtFactor;
+          ft.alpha -= 0.022 * dtFactor;
+          if (ft.alpha <= 0) floatingTexts.splice(i, 1);
+        }
+      }
+
+      function drawRunner() {
+        ctx.clearRect(0, 0, viewW, viewH);
+
+        // 1. Vẽ nền trời Pastel & Mây bồng bềnh
+        clouds.forEach(c => {
+          ctx.save();
+          ctx.translate(c.x, c.y);
+          ctx.scale(c.scale, c.scale);
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+          ctx.beginPath();
+          ctx.arc(0, 0, 24, 0, Math.PI * 2);
+          ctx.arc(22, -6, 20, 0, Math.PI * 2);
+          ctx.arc(42, 0, 18, 0, Math.PI * 2);
+          ctx.arc(-20, 4, 16, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        });
+
+        // 2. Vẽ cánh hoa đào rơi lãng mạn
+        sakuraPetals.forEach(p => {
+          ctx.save();
+          ctx.translate(p.x, p.y);
+          ctx.rotate(p.angle);
+          ctx.fillStyle = '#FFC2D1';
+          ctx.beginPath();
+          ctx.ellipse(0, 0, p.size, p.size * 0.55, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        });
+
+        // 3. Vẽ mặt đất sân trường Pastel Mint & Hồng
+        const groundHeight = viewH - groundY;
+        ctx.fillStyle = '#B5EAD7';
+        ctx.fillRect(0, groundY, viewW, groundHeight);
+
+        // Đường viền cỏ hồng phấn trên mặt đất
+        ctx.fillStyle = '#FF9EBB';
+        ctx.fillRect(0, groundY, viewW, 8);
+
+        // Họa tiết gạch sân trường chuyển động
+        const stripeOffset = (performance.now() * 0.18) % 60;
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+        for (let x = -stripeOffset; x < viewW + 60; x += 60) {
+          drawRoundedRect(ctx, x, groundY + 18, 32, 8, 4, 'rgba(255, 255, 255, 0.55)', null);
+        }
+
+        // 4. Vẽ Vật phẩm thu thập (Trà sữa, Cà rốt, Hoa 20/10)
+        collectibles.forEach(col => {
+          const cy = col.y + Math.sin(col.bobPhase) * 6;
+          ctx.save();
+          ctx.translate(col.x, cy);
+
+          // Vòng tròn pastel phát sáng quanh vật phẩm
+          ctx.beginPath();
+          ctx.arc(0, 0, col.r, 0, Math.PI * 2);
+          ctx.fillStyle = col.item.bg;
+          ctx.fill();
+          ctx.lineWidth = 2.5;
+          ctx.strokeStyle = '#FFFFFF';
+          ctx.stroke();
+
+          // Emoji vật phẩm
+          ctx.font = '26px "Apple Color Emoji", "Segoe UI Emoji", sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(col.item.emoji, 0, 2);
+
+          // Nhãn điểm nhỏ phía dưới
+          ctx.font = '800 11px Quicksand, sans-serif';
+          ctx.fillStyle = col.item.color;
+          ctx.fillText(`+${col.item.points}đ`, 0, col.r + 12);
+
+          ctx.restore();
+        });
+
+        // 5. Vẽ Chướng ngại vật kèm nhãn chữ Tiếng Việt rõ ràng
+        obstacles.forEach(obs => {
+          ctx.save();
+          const boxX = obs.x - obs.w / 2;
+          const boxY = obs.y - obs.h;
+
+          // Bóng đổ dưới chân chướng ngại vật
+          ctx.fillStyle = 'rgba(0,0,0,0.08)';
+          ctx.beginPath();
+          ctx.ellipse(obs.x, groundY + 2, obs.w * 0.48, 5, 0, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Khối thẻ bo tròn chứa icon chướng ngại vật (đỉnh khối chính là giới hạn nhảy thật)
+          drawRoundedRect(ctx, boxX, boxY, obs.w, obs.h, 14, obs.type.bg, obs.type.border, 3);
+
+          // Emoji lớn chính giữa
+          ctx.font = '26px "Apple Color Emoji", "Segoe UI Emoji", sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(obs.type.emoji, obs.x, boxY + obs.h / 2);
+
+          // Đặt bảng tên chướng ngại vật ở dưới chân khối (không che phía trên đầu để canh nhảy chuẩn xác)
+          ctx.font = '800 10.5px Quicksand, sans-serif';
+          const textWidth = ctx.measureText(obs.type.label).width;
+          const pillW = textWidth + 14;
+          const pillH = 19;
+          const pillX = obs.x - pillW / 2;
+          const pillY = obs.y - 6;
+
+          drawRoundedRect(ctx, pillX, pillY, pillW, pillH, 8, '#FFFFFF', obs.type.border, 1.8);
+          ctx.fillStyle = obs.type.textColor;
+          ctx.fillText(obs.type.label, obs.x, pillY + pillH / 2 + 0.5);
+
+          ctx.restore();
+        });
+
+        // 6. Vẽ hạt hiệu ứng khi nhảy
+        jumpParticles.forEach(jp => {
+          ctx.save();
+          ctx.globalAlpha = Math.max(0, jp.alpha);
+          ctx.font = `${Math.round(jp.size)}px sans-serif`;
+          ctx.textAlign = 'center';
+          ctx.fillText(jp.symbol, jp.x, jp.y);
+          ctx.restore();
+        });
+
+        // 7. Vẽ Nhân Vật: BÉ THỎ CÔ GIÁO TIỂU HỌC
+        drawTeacherBunny();
+
+        // 8. Vẽ điểm cộng bay lên
+        floatingTexts.forEach(ft => {
+          ctx.save();
+          ctx.globalAlpha = Math.max(0, ft.alpha);
+          ctx.font = '800 16px Quicksand, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.lineWidth = 4;
+          ctx.strokeStyle = '#FFFFFF';
+          ctx.strokeText(ft.text, ft.x, ft.y);
+          ctx.fillStyle = ft.color;
+          ctx.fillText(ft.text, ft.x, ft.y);
+          ctx.restore();
+        });
+      }
+
+      function drawTeacherBunny() {
+        ctx.save();
+
+        // Hiệu ứng nhấp nháy nhẹ nếu vừa chạm vật cản
+        if (bunny.invincibleTimer > 0 && Math.floor(bunny.invincibleTimer / 4) % 2 === 1) {
+          ctx.globalAlpha = 0.6;
+        }
+
+        const bounceY = bunny.onGround ? Math.abs(Math.sin(bunny.runCycle)) * 6 : 0;
+        const tiltAngle = bunny.onGround
+          ? Math.sin(bunny.runCycle) * 0.06
+          : Math.max(-0.25, Math.min(0.25, bunny.vy * 0.018));
+
+        // Bóng đổ dưới mặt đất
+        const shadowScale = Math.max(0.4, 1 - (groundY - bunny.y) / 220);
+        ctx.fillStyle = 'rgba(216, 75, 112, 0.18)';
+        ctx.beginPath();
+        ctx.ellipse(bunny.x, groundY + 3, 26 * shadowScale, 6 * shadowScale, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.translate(bunny.x, bunny.y - bounceY);
+        ctx.rotate(tiltAngle);
+
+        // Thân áo dài / váy cô giáo tiểu học màu hồng pastel
+        drawRoundedRect(ctx, -20, -34, 40, 30, 14, '#FF8FAB', '#FFFFFF', 2.5);
+
+        // Cổ áo trắng & Thẻ giáo viên nhỏ xinh
+        ctx.fillStyle = '#FFFFFF';
+        ctx.beginPath();
+        ctx.arc(0, -32, 9, 0, Math.PI);
+        ctx.fill();
+        drawRoundedRect(ctx, 4, -24, 12, 9, 3, '#FFF9DB', '#F4A261', 1.2);
+
+        // Khuôn mặt Chú Thỏ 🐰
+        ctx.font = '44px "Apple Color Emoji", "Segoe UI Emoji", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('🐰', 0, -48);
+
+        // Nơ hồng cô giáo cài trên tai thỏ
+        ctx.font = '18px "Apple Color Emoji", "Segoe UI Emoji", sans-serif';
+        ctx.fillText('🎀', -12, -68);
+
+        // Kính tròn tri thức của cô giáo
+        ctx.strokeStyle = '#6D597A';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(-8, -45, 6.5, 0, Math.PI * 2);
+        ctx.arc(8, -45, 6.5, 0, Math.PI * 2);
+        ctx.moveTo(-1.5, -45);
+        ctx.lineTo(1.5, -45);
+        ctx.stroke();
+
+        // Tay cầm thước chỉ bảng / phấn trắng
+        ctx.strokeStyle = '#F4A261';
+        ctx.lineWidth = 3.5;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(16, -22);
+        ctx.lineTo(30, -34);
+        ctx.stroke();
+
+        ctx.restore();
+
+        // Bong bóng thoại dễ thương trên đầu Cô Giáo Thỏ
+        if (bunny.speechTimer > 0 && bunny.speechText) {
+          ctx.save();
+          ctx.font = '800 12px Quicksand, sans-serif';
+          const padX = 12;
+          const textW = ctx.measureText(bunny.speechText).width;
+          const bw = textW + padX * 2;
+          const bh = 26;
+          const bx = Math.max(12, Math.min(viewW - bw - 12, bunny.x - bw / 2 + 25));
+          const by = bunny.y - 102;
+
+          drawRoundedRect(ctx, bx, by, bw, bh, 12, '#FFFFFF', '#FF8FAB', 2);
+          ctx.fillStyle = '#C9184A';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(bunny.speechText, bx + bw / 2, by + bh / 2 + 1);
+          ctx.restore();
+        }
+      }
+
+      /* ------------------------------------------------------------------------
+         6. VÒNG QUAY MAY MẮN 20/10 & CƠ CHẾ KÉO TAY ĂN GIAN TRÚNG "ALL"
+         ------------------------------------------------------------------------ */
+      const wheelCanvas = document.getElementById('wheelCanvas');
+      const wheelCtx = wheelCanvas.getContext('2d');
+      const spinWheelBtn = document.getElementById('spinWheelBtn');
+      const wheelResultTitle = document.getElementById('wheelResultTitle');
+      const wheelResultDesc = document.getElementById('wheelResultDesc');
+      const wheelSubHint = document.getElementById('wheelSubHint');
+
+      // Danh sách 5 ô giải thưởng theo đúng yêu cầu
+      const WHEEL_SLICES = [
+        {
+          id: 'sticker',
+          shortLabel: 'Quyển sổ sticker',
+          fullLabel: 'Quyển sổ sticker',
+          emoji: '📒',
+          bg: '#FFD1DC',
+          textColor: '#9D174D'
+        },
+        {
+          id: 'pen1',
+          shortLabel: '1 cây bút đỏ',
+          fullLabel: '1 cây bút đỏ',
+          emoji: '🖍️',
+          bg: '#FFF3B0',
+          textColor: '#92400E'
+        },
+        {
+          id: 'pen2',
+          shortLabel: '2 cây bút đỏ',
+          fullLabel: '2 cây bút đỏ',
+          emoji: '🖊️',
+          bg: '#B5EAD7',
+          textColor: '#065F46'
+        },
+        {
+          id: 'love',
+          shortLabel: 'Tình yêu MinMin',
+          fullLabel: 'Tình yêu vô bờ bến của MinMin',
+          emoji: '💖',
+          bg: '#E2D4F0',
+          textColor: '#5B21B6'
+        },
+        {
+          id: 'ALL',
+          shortLabel: 'ALL',
+          fullLabel: 'ALL',
+          emoji: '🎁✨',
+          bg: '#FF6B8B',
+          textColor: '#FFFFFF',
+          isJackpot: true
+        }
+      ];
+
+      const SLICE_COUNT = WHEEL_SLICES.length; // 5 ô
+      const SLICE_ANGLE = (Math.PI * 2) / SLICE_COUNT; // Mỗi ô rộng 72 độ (2*PI / 5)
+      const POINTER_ANGLE = -Math.PI / 2; // Kim chỉ thưởng nằm ở đỉnh 12 giờ (-90 độ)
+
+      let wheelAngle = 0; // Góc xoay hiện tại của vòng quay (radian)
+      let isAutoSpinning = false;
+      let isDraggingWheel = false;
+      let dragStartPointerAngle = 0;
+      let dragStartWheelAngle = 0;
+      let wheelLocked = false; // Khóa vòng quay ngay khi người chơi kéo trúng ô ALL
+      let lastTickSliceIndex = -1;
+      let allHoldFrames = 0; // Đếm số frame giữ ở ô ALL khi kéo tay
+
+      function setupWheelCanvasDPI() {
+        const size = Math.min(310, window.innerWidth - 40, window.innerHeight * 0.44);
+        const finalSize = Math.max(240, Math.round(size));
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        wheelCanvas.style.width = finalSize + 'px';
+        wheelCanvas.style.height = finalSize + 'px';
+        wheelCanvas.width = finalSize * dpr;
+        wheelCanvas.height = finalSize * dpr;
+        wheelCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        drawLuckyWheel();
+      }
+
+      /**
+       * Hàm tính xem ô giải thưởng nào (index 0..4) đang nằm ngay dưới mũi tên chỉ thưởng (12 giờ)
+       */
+      function getSliceIndexAtPointer(currentWheelAngle) {
+        // Chuẩn hóa góc tương đối giữa mũi tên (-PI/2) và góc xoay của vòng quay
+        let relativeAngle = (POINTER_ANGLE - currentWheelAngle) % (Math.PI * 2);
+        if (relativeAngle < 0) {
+          relativeAngle += Math.PI * 2;
+        }
+        return Math.floor(relativeAngle / SLICE_ANGLE) % SLICE_COUNT;
+      }
+
+      /**
+       * Hàm vẽ Vòng Quay May Mắn lên Canvas
+       */
+      function drawLuckyWheel() {
+        const size = parseFloat(wheelCanvas.style.width) || 300;
+        const cx = size / 2;
+        const cy = size / 2;
+        const radius = size / 2 - 10;
+
+        wheelCtx.clearRect(0, 0, size, size);
+
+        const activeIndex = getSliceIndexAtPointer(wheelAngle);
+
+        // Vẽ từng ô quạt trên vòng quay
+        for (let i = 0; i < SLICE_COUNT; i++) {
+          const slice = WHEEL_SLICES[i];
+          const startAngle = wheelAngle + i * SLICE_ANGLE;
+          const endAngle = startAngle + SLICE_ANGLE;
+          const midAngle = startAngle + SLICE_ANGLE / 2;
+
+          wheelCtx.save();
+          wheelCtx.beginPath();
+          wheelCtx.moveTo(cx, cy);
+          wheelCtx.arc(cx, cy, radius, startAngle, endAngle);
+          wheelCtx.closePath();
+
+          wheelCtx.fillStyle = slice.bg;
+          wheelCtx.fill();
+
+          // Đường viền trắng phân tách các ô
+          wheelCtx.lineWidth = 3;
+          wheelCtx.strokeStyle = '#FFFFFF';
+          wheelCtx.stroke();
+
+          // Làm nổi bật ô đang nằm ngay dưới kim chỉ thưởng
+          if (i === activeIndex) {
+            wheelCtx.lineWidth = 4;
+            wheelCtx.strokeStyle = slice.isJackpot ? '#FDE047' : '#FB6F92';
+            wheelCtx.stroke();
+          }
+
+          // Vẽ chữ và icon bên trong mỗi ô quạt
+          wheelCtx.translate(cx, cy);
+          wheelCtx.rotate(midAngle);
+
+          wheelCtx.textAlign = 'right';
+          wheelCtx.textBaseline = 'middle';
+          wheelCtx.fillStyle = slice.textColor;
+
+          // Tên giải thưởng
+          wheelCtx.font = slice.isJackpot
+            ? '800 12px Quicksand, sans-serif'
+            : '700 11.5px Quicksand, sans-serif';
+          wheelCtx.fillText(slice.shortLabel, radius - 16, -9);
+
+          // Emoji giải thưởng
+          wheelCtx.font = '20px "Apple Color Emoji", "Segoe UI Emoji", sans-serif';
+          wheelCtx.fillText(slice.emoji, radius - 22, 12);
+
+          wheelCtx.restore();
+        }
+
+        // Vẽ viền ngoài đính hạt đèn LED vàng kem
+        wheelCtx.save();
+        wheelCtx.beginPath();
+        wheelCtx.arc(cx, cy, radius, 0, Math.PI * 2);
+        wheelCtx.lineWidth = 6;
+        wheelCtx.strokeStyle = '#FBCFE8';
+        wheelCtx.stroke();
+
+        for (let d = 0; d < 20; d++) {
+          const a = (d * Math.PI * 2) / 20;
+          const lx = cx + Math.cos(a) * (radius - 1);
+          const ly = cy + Math.sin(a) * (radius - 1);
+          wheelCtx.beginPath();
+          wheelCtx.arc(lx, ly, 3.2, 0, Math.PI * 2);
+          wheelCtx.fillStyle = d % 2 === 0 ? '#FFF9DB' : '#FB6F92';
+          wheelCtx.fill();
+        }
+        wheelCtx.restore();
+
+        // Vẽ tâm vòng quay hình Cô Giáo Thỏ
+        wheelCtx.save();
+        wheelCtx.beginPath();
+        wheelCtx.arc(cx, cy, 30, 0, Math.PI * 2);
+        wheelCtx.fillStyle = '#FFFFFF';
+        wheelCtx.fill();
+        wheelCtx.lineWidth = 4;
+        wheelCtx.strokeStyle = '#FF8FAB';
+        wheelCtx.stroke();
+
+        wheelCtx.font = '24px "Apple Color Emoji", "Segoe UI Emoji", sans-serif';
+        wheelCtx.textAlign = 'center';
+        wheelCtx.textBaseline = 'middle';
+        wheelCtx.fillText('🐰', cx, cy + 2);
+        wheelCtx.restore();
+      }
+
+      function openWheelScreen() {
+        gameState = 'WHEEL';
+        wheelLocked = false;
+        isAutoSpinning = false;
+        isDraggingWheel = false;
+        SoundFX.isWheelSpinning = false;
+        SoundFX.startBGM('WHEEL');
+        // Đặt góc ban đầu để ô ALL nằm lệch khỏi mũi tên
+        wheelAngle = 0.25;
+        wheelScreenEl.classList.remove('hidden');
+        setupWheelCanvasDPI();
+      }
+
+      /* ------------------------------------------------------------------------
+         KỊCH BẢN 1: BẤM NÚT "QUAY NGAY" (TỰ ĐỘNG QUAY - KHÔNG BAO GIỜ DỪNG Ở Ô "ALL")
+         ------------------------------------------------------------------------ */
+      function startAutoSpin() {
+        if (isAutoSpinning || wheelLocked) return;
+        SoundFX.init();
+        isAutoSpinning = true;
+        SoundFX.isWheelSpinning = true;
+        spinWheelBtn.disabled = true;
+        spinWheelBtn.classList.add('opacity-60');
+
+        wheelResultTitle.textContent = '🎡 Vòng quay đang xoay tít...';
+        wheelResultDesc.textContent = 'Hồi hộp chờ xem kim dừng ở ô nào nha!';
+
+        // LẬP TRÌNH ĐỂ KIM KHÔNG BAO GIỜ DỪNG VÀO Ô "ALL" (index 4)
+        // Chỉ chọn ngẫu nhiên 1 trong 4 ô quà lẻ (index 0, 1, 2, hoặc 3)
+        const allowedIndices = [0, 1, 2, 3];
+        const targetIndex = allowedIndices[Math.floor(Math.random() * allowedIndices.length)];
+
+        // Tính góc đích để kim chỉ thưởng (-PI/2) nằm chính giữa ô targetIndex (cộng độ lệch ngẫu nhiên an toàn)
+        const safeOffsetWithinSlice = (0.22 + Math.random() * 0.56) * SLICE_ANGLE;
+        const desiredModAngle = POINTER_ANGLE - (targetIndex * SLICE_ANGLE + safeOffsetWithinSlice);
+
+        // Quay thêm 5 đến 6 vòng tròn đầy đủ trước khi dừng lại
+        const extraFullSpins = (5 + Math.floor(Math.random() * 2)) * Math.PI * 2;
+        const currentMod = wheelAngle % (Math.PI * 2);
+        let deltaAngle = desiredModAngle - currentMod;
+        while (deltaAngle < 0) {
+          deltaAngle += Math.PI * 2;
+        }
+
+        const startWheelAngle = wheelAngle;
+        const finalWheelAngle = startWheelAngle + extraFullSpins + deltaAngle;
+        const duration = 3400; // Quay trong 3.4 giây
+        const startTime = performance.now();
+
+        function animateAutoSpin(now) {
+          if (isDraggingWheel || wheelLocked) return; // Nếu người chơi chạm tay can thiệp
+          const elapsed = now - startTime;
+          const progress = Math.min(1, elapsed / duration);
+          // Hàm giảm tốc mượt mà (Ease-Out Cubic)
+          const easeOut = 1 - Math.pow(1 - progress, 3);
+
+          wheelAngle = startWheelAngle + (finalWheelAngle - startWheelAngle) * easeOut;
+
+          // Phát nốt nhạc Kalimba ngũ cung mỗi khi mũi tên đi qua ranh giới ô mới
+          const currentSlice = getSliceIndexAtPointer(wheelAngle);
+          if (currentSlice !== lastTickSliceIndex) {
+            lastTickSliceIndex = currentSlice;
+            SoundFX.tick(currentSlice);
+          }
+
+          drawLuckyWheel();
+
+          if (progress < 1) {
+            requestAnimationFrame(animateAutoSpin);
+          } else {
+            isAutoSpinning = false;
+            SoundFX.isWheelSpinning = false;
+            spinWheelBtn.disabled = false;
+            spinWheelBtn.classList.remove('opacity-60');
+
+            const wonSlice = WHEEL_SLICES[targetIndex];
+            SoundFX.winNormalPrize();
+
+            // Hiển thị kết quả quay tự động và bật Popup chúc mừng đơn giản
+            wheelResultTitle.innerHTML = `🎁 Chúc mừng trúng: <span class="underline">${wonSlice.fullLabel}</span> ${wonSlice.emoji}`;
+            wheelResultDesc.textContent = 'Phần quà 20/10 đáng yêu dành tặng cho Bé Thỏ!';
+
+            setTimeout(() => {
+              if (!wheelLocked && !isDraggingWheel) {
+                normalPrizeEmojiEl.textContent = wonSlice.emoji;
+                normalPrizeNameEl.textContent = `${wonSlice.fullLabel} ${wonSlice.emoji}`;
+                normalPrizeModalEl.classList.remove('hidden');
+              }
+            }, 350);
+          }
+        }
+
+        requestAnimationFrame(animateAutoSpin);
+      }
+
+      spinWheelBtn.addEventListener('click', startAutoSpin);
+
+      /* ========================================================================
+         KỊCH BẢN 2: CƠ CHẾ KÉO VÒNG QUAY BẰNG TAY (INTERACTIVE DRAG / TROLL "ALL")
+         ========================================================================
+         HƯỚNG DẪN & CHÚ THÍCH CHI TIẾT CÁCH XỬ LÝ SỰ KIỆN KÉO VÒNG QUAY BẰNG TAY:
+         ------------------------------------------------------------------------
+         1. Khi người chơi chạm ngón tay (`touchstart`) hoặc nhấn chuột (`mousedown`)
+            lên `#wheelCanvas`:
+            - Ta lấy tọa độ tâm của vòng quay `(centerX, centerY)` thông qua `getBoundingClientRect()`.
+            - Dùng hàm lượng giác `Math.atan2(clientY - centerY, clientX - centerX)` để
+              tính góc của ngón tay so với tâm vòng quay (`dragStartPointerAngle`).
+            - Lưu lại góc hiện tại của vòng quay (`dragStartWheelAngle = wheelAngle`).
+
+         2. Khi người chơi di chuyển ngón tay (`touchmove`) hoặc kéo chuột (`mousemove`):
+            - Gọi `e.preventDefault()` (với `{ passive: false }`) để khóa cứng màn hình
+              iPhone 11, không cho trình duyệt cuộn trang khi đang xoay vòng quay.
+            - Tính góc mới của ngón tay `currentPointerAngle = Math.atan2(...)`.
+            - Độ chênh lệch góc xoay tay là `deltaAngle = currentPointerAngle - dragStartPointerAngle`.
+            - Cập nhật góc vòng quay theo thời gian thực:
+              `wheelAngle = dragStartWheelAngle + deltaAngle` rồi vẽ lại vòng quay ngay lập tức.
+
+         3. Kiểm tra khớp ô "ALL" (index === 4) ngay trong lúc kéo (`checkManualAllMatch`):
+            - Dùng hàm `getSliceIndexAtPointer(wheelAngle)` để kiểm tra xem ô đang nằm
+              ngay dưới mũi tên chỉ thưởng (ở đỉnh -90 độ) có phải là ô `"ALL"` hay không.
+            - Ngay khi người chơi kéo cho ô `"ALL"` khớp vào mũi tên chỉ thưởng (giữ khớp
+              khoảng ~0.18 giây hoặc thả tay ra đúng trên ô `"ALL"`), hàm `triggerWinAllJackpot()`
+              sẽ lập tức KHÓA vòng quay (`wheelLocked = true`), bắn pháo hoa Confetti ngập
+              màn hình, phát nhạc chiến thắng và bật Popup Thiệp Chúc Mừng 20/10!
+         ======================================================================== */
+
+      /**
+       * Hàm phụ trợ: Tính góc (radian) từ tâm Canvas Vòng Quay tới vị trí ngón tay / con trỏ chuột
+       */
+      function getPointerAngleFromCenter(clientX, clientY) {
+        const rect = wheelCanvas.getBoundingClientRect();
+        const centerX = rect.left + rect.width / 2;
+        const centerY = rect.top + rect.height / 2;
+        return Math.atan2(clientY - centerY, clientX - centerX);
+      }
+
+      /**
+       * Bắt đầu chạm tay / nhấn chuột vào vòng quay
+       */
+      function handleWheelDragStart(clientX, clientY) {
+        if (wheelLocked) return;
+        SoundFX.init();
+
+        // Nếu vòng quay đang quay tự động, cho phép ngón tay người chơi giữ lại luôn!
+        isAutoSpinning = false;
+        isDraggingWheel = true;
+        SoundFX.isWheelSpinning = true;
+        allHoldFrames = 0;
+
+        // Lưu góc ban đầu của ngón tay và góc hiện tại của vòng quay
+        dragStartPointerAngle = getPointerAngleFromCenter(clientX, clientY);
+        dragStartWheelAngle = wheelAngle;
+      }
+
+      /**
+       * Di chuyển ngón tay / chuột để tự xoay vòng quay theo ý muốn
+       */
+      function handleWheelDragMove(clientX, clientY) {
+        if (!isDraggingWheel || wheelLocked) return;
+
+        // Tính góc hiện tại của ngón tay và cập nhật góc xoay của vòng quay
+        const currentPointerAngle = getPointerAngleFromCenter(clientX, clientY);
+        const deltaAngle = currentPointerAngle - dragStartPointerAngle;
+        wheelAngle = dragStartWheelAngle + deltaAngle;
+
+        // Kiểm tra xem mũi tên đang chỉ vào ô nào
+        const currentSliceIdx = getSliceIndexAtPointer(wheelAngle);
+        if (currentSliceIdx !== lastTickSliceIndex) {
+          lastTickSliceIndex = currentSliceIdx;
+          SoundFX.tick(currentSliceIdx);
+        }
+
+        const currentSlice = WHEEL_SLICES[currentSliceIdx];
+        wheelResultTitle.innerHTML = `👆 Đang xoay tay tới: <span class="text-rose-600">${currentSlice.shortLabel}</span> ${currentSlice.emoji}`;
+
+        drawLuckyWheel();
+
+        // Nếu người chơi kéo cho ô "ALL" khớp vào mũi tên chỉ thưởng
+        if (currentSlice.id === 'ALL') {
+          allHoldFrames++;
+          wheelResultDesc.innerHTML = `✨ <strong class="text-rose-600">Đúng rồi! Khớp ô ALL rồi đó!</strong>`;
+          // Khi kéo khớp vào vùng tâm của ô ALL (hoặc giữ nhẹ trên ô ALL) -> Kích hoạt chiến thắng ngay!
+          if (allHoldFrames >= 8 || isNearCenterOfAllSlice(wheelAngle)) {
+            triggerWinAllJackpot();
+          }
+        } else {
+          allHoldFrames = 0;
+          wheelResultDesc.textContent = 'Đang xoay vòng quay bằng tay...';
+        }
+      }
+
+      /**
+       * Kiểm tra xem mũi tên đã nằm gọn bên trong vùng giữa của ô "ALL" chưa
+       */
+      function isNearCenterOfAllSlice(currentWheelAngle) {
+        let relativeAngle = (POINTER_ANGLE - currentWheelAngle) % (Math.PI * 2);
+        if (relativeAngle < 0) relativeAngle += Math.PI * 2;
+        const allStart = 4 * SLICE_ANGLE; // Ô ALL nằm ở vị trí thứ 5 (index = 4)
+        const allEnd = 5 * SLICE_ANGLE;
+        const margin = SLICE_ANGLE * 0.22; // Vùng khớp mượt ở giữa ô ALL
+        return relativeAngle >= allStart + margin && relativeAngle <= allEnd - margin;
+      }
+
+      /**
+       * Khi người chơi nhấc ngón tay hoặc nhả chuột ra
+       */
+      function handleWheelDragEnd() {
+        if (!isDraggingWheel || wheelLocked) return;
+        isDraggingWheel = false;
+        SoundFX.isWheelSpinning = false;
+
+        // Nếu vừa thả tay mà kim đang chỉ ở ô ALL thì khóa và thắng ngay lập tức
+        const currentSliceIdx = getSliceIndexAtPointer(wheelAngle);
+        if (WHEEL_SLICES[currentSliceIdx].id === 'ALL') {
+          triggerWinAllJackpot();
+        }
+      }
+
+      /**
+       * Kích hoạt chiến thắng tuyệt đối khi kéo trúng ô "ALL"
+       */
+      function triggerWinAllJackpot() {
+        if (wheelLocked) return;
+        wheelLocked = true;
+        isDraggingWheel = false;
+        isAutoSpinning = false;
+        SoundFX.isWheelSpinning = false;
+
+        // Căn chỉnh góc vòng quay khớp chính giữa ô ALL cho thật đẹp mắt
+        const allCenterAngle = 4 * SLICE_ANGLE + SLICE_ANGLE / 2;
+        wheelAngle = POINTER_ANGLE - allCenterAngle;
+        drawLuckyWheel();
+
+        // Cập nhật trạng thái khóa vòng quay và chúc mừng
+        wheelResultTitle.innerHTML = `🎉 <span class="text-rose-600">CHỐT ĐƠN Ô "ALL" THÀNH CÔNG!</span> 🎉`;
+        wheelResultDesc.innerHTML = `Em đã dùng "bàn tay phép thuật" xoay trúng trọn bộ tất cả quà 20/10!`;
+
+        // Âm thanh chiến thắng + Pháo hoa Confetti ngập màn hình
+        SoundFX.winAllFanfare();
+        launchConfetti(160);
+
+        // Hiện Popup Thiệp Chúc Mừng 20/10 sau 650ms để người chơi kịp nhìn vòng quay khớp ô ALL
+        setTimeout(() => {
+          gameState = 'VICTORY';
+          victoryModalEl.classList.remove('hidden');
+          launchConfetti(120);
+        }, 650);
+      }
+
+      // Gắn sự kiện Cảm ứng (Touch Events cho iPhone/Mobile) lên Vòng Quay
+      wheelCanvas.addEventListener('touchstart', function (e) {
+        e.preventDefault(); // Chặn cuộn trang tuyệt đối khi chạm vào vòng quay
+        if (e.touches.length > 0) {
+          handleWheelDragStart(e.touches[0].clientX, e.touches[0].clientY);
+        }
+      }, { passive: false });
+
+      wheelCanvas.addEventListener('touchmove', function (e) {
+        e.preventDefault(); // Chặn cuộn trang khi đang rê ngón tay xoay vòng quay
+        if (e.touches.length > 0) {
+          handleWheelDragMove(e.touches[0].clientX, e.touches[0].clientY);
+        }
+      }, { passive: false });
+
+      wheelCanvas.addEventListener('touchend', function (e) {
+        e.preventDefault();
+        handleWheelDragEnd();
+      }, { passive: false });
+
+      // Gắn sự kiện Chuột (Mouse Events cho máy tính/Laptop) lên Vòng Quay
+      wheelCanvas.addEventListener('mousedown', function (e) {
+        e.preventDefault();
+        handleWheelDragStart(e.clientX, e.clientY);
+      });
+
+      window.addEventListener('mousemove', function (e) {
+        if (isDraggingWheel) {
+          handleWheelDragMove(e.clientX, e.clientY);
+        }
+      });
+
+      window.addEventListener('mouseup', function () {
+        if (isDraggingWheel) {
+          handleWheelDragEnd();
+        }
+      });
+
+      /* ------------------------------------------------------------------------
+         7. CÁC NÚT ĐIỀU KHIỂN GIAO DIỆN & VÒNG LẶP GAME LOOP CHÍNH
+         ------------------------------------------------------------------------ */
+      document.getElementById('startGameBtn').addEventListener('click', startRunnerGame);
+      document.getElementById('retryGameOverBtn').addEventListener('click', startRunnerGame);
+
+      document.getElementById('closeNormalPrizeBtn').addEventListener('click', function () {
+        normalPrizeModalEl.classList.add('hidden');
+      });
+
+      document.getElementById('soundToggleBtn').addEventListener('click', function () {
+        SoundFX.muted = !SoundFX.muted;
+        this.textContent = SoundFX.muted ? '🔇' : '🔊';
+      });
+
+      document.getElementById('fireworkAgainBtn').addEventListener('click', function () {
+        SoundFX.winAllFanfare();
+        launchConfetti(150);
+      });
+
+      document.getElementById('replayGameBtn').addEventListener('click', function () {
+        startRunnerGame();
+      });
+
+      window.addEventListener('resize', function () {
+        resizeRunnerCanvas();
+        if (gameState === 'WHEEL' || gameState === 'VICTORY') {
+          setupWheelCanvasDPI();
+        }
+      });
+
+      // Vòng lặp chính 60fps
+      function mainLoop(now) {
+        const dt = Math.min(40, now - lastFrameTime);
+        lastFrameTime = now;
+        const dtFactor = dt / 16.67;
+
+        updateRunner(dtFactor);
+        drawRunner();
+
+        requestAnimationFrame(mainLoop);
+      }
+
+      // Khởi chạy khi tải xong trang
+      window.onload = function () {
+        resizeRunnerCanvas();
+        initScenery();
+        bunny.y = groundY;
+        lastFrameTime = performance.now();
+        requestAnimationFrame(mainLoop);
+      };
+    })();
+  </script>
+</body>
+</html>
